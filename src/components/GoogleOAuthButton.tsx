@@ -5,8 +5,13 @@ import { googleOAuthLogin } from "../api/manApi";
 import type { CredentialResponse } from "@react-oauth/google";
 import { scheduleLogoutAtJwtExp } from "../util/authUtils";
 import { useUser } from "../login/useUser";
+import type { AuthResponse } from "../api/manApi";
 
-const GoogleOAuthButton = () => {
+type GoogleOAuthButtonProps = {
+  onAuthenticated?: (data: AuthResponse) => Promise<void> | void;
+};
+
+const GoogleOAuthButton = ({ onAuthenticated }: GoogleOAuthButtonProps) => {
   const navigate = useNavigate();
   const { setUser } = useUser();
 
@@ -35,7 +40,11 @@ const GoogleOAuthButton = () => {
       // }, 10 * 60 * 60 * 1000);
       // handleAutoLogout(setUser);
       scheduleLogoutAtJwtExp(setUser, data.access_token);
-      navigate("/");
+      if (onAuthenticated) {
+        await onAuthenticated(data);
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       alert("Google login failed");
       console.error("Google OAuth error:", err);

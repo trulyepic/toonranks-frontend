@@ -1,13 +1,22 @@
 import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import ReCAPTCHA from "react-google-recaptcha";
-import { login, resendVerificationEmail } from "../api/manApi";
+import {
+  createMobileAuthCode,
+  login,
+  resendVerificationEmail,
+} from "../api/manApi";
+import type { AuthResponse } from "../api/manApi";
 import GoogleOAuthButton from "../components/GoogleOAuthButton";
 import AuthShell from "../components/AuthShell";
 import { scheduleLogoutAtJwtExp } from "../util/authUtils";
 import { useUser } from "../login/useUser";
 import { NoIndexSeo } from "../components/Seo";
 import { SITE_NAME } from "../config/site";
+import {
+  getMobileAuthRequest,
+  redirectToMobileAuthCallback,
+} from "../util/mobileAuthRedirect";
 
 const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#4a3c33] dark:focus:bg-[#181310] dark:focus:ring-[#2a221c]";
@@ -17,6 +26,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const { setUser } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState("");
 
@@ -28,6 +38,26 @@ const LoginPage = () => {
   const [resendMsg, setResendMsg] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resendCaptcha, setResendCaptcha] = useState("");
+  const mobileAuthRequest = getMobileAuthRequest(location.search);
+
+  const finishAuthenticatedSession = async (data: AuthResponse) => {
+    setUser(data.user);
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    scheduleLogoutAtJwtExp(setUser, data.access_token);
+    setError(null);
+
+    if (mobileAuthRequest.isMobile && mobileAuthRequest.redirectUri) {
+      const mobileCode = await createMobileAuthCode({
+        redirect_uri: mobileAuthRequest.redirectUri,
+        state: mobileAuthRequest.state,
+      });
+      redirectToMobileAuthCallback(mobileCode.redirect_url);
+      return;
+    }
+
+    navigate("/");
+  };
 
   const handleLogin = async () => {
     setError(null);
@@ -50,12 +80,7 @@ const LoginPage = () => {
         password,
         captcha_token: captchaToken,
       });
-      setUser(data.user);
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      scheduleLogoutAtJwtExp(setUser, data.access_token);
-      setError(null);
-      navigate("/");
+      await finishAuthenticatedSession(data);
     } catch (err) {
       const msg = (err as Error).message || "";
       console.error("Login error:", msg);
@@ -74,6 +99,8 @@ const LoginPage = () => {
         statusCode === "400"
       ) {
         setError("CAPTCHA expired. Please try again.");
+      } else if (mobileAuthRequest.isMobile) {
+        setError("Login succeeded, but returning to the app failed. Please try again.");
       } else {
         setError("Login failed. Please try again.");
       }
@@ -260,7 +287,7 @@ const LoginPage = () => {
         </div>
 
         <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))]">
-          <GoogleOAuthButton />
+          <GoogleOAuthButton onAuthenticated={finishAuthenticatedSession} />
         </div>
       </div>
     </AuthShell>

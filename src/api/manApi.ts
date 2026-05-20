@@ -574,6 +574,11 @@ export interface AuthResponse {
   access_token: string;
   user: AuthUser;
 }
+export interface MobileAuthCodeResponse {
+  code: string;
+  expires_in: number;
+  redirect_url: string;
+}
 export type UserAvatar = Pick<AuthUser, "id" | "username" | "role"> &
   Required<Pick<AvatarFields, "avatar_preset">> &
   Pick<AvatarFields, "avatar_url">;
@@ -813,6 +818,17 @@ export const googleOAuthLogin = async (
   // Keep existing behavior: persist token + user here
   localStorage.setItem("token", res.data.access_token);
   localStorage.setItem("user", JSON.stringify(res.data.user));
+  return res.data;
+};
+
+export const createMobileAuthCode = async (payload: {
+  redirect_uri: string;
+  state?: string | null;
+}): Promise<MobileAuthCodeResponse> => {
+  const res = await api.post<MobileAuthCodeResponse>("/auth/mobile-code", {
+    redirect_uri: payload.redirect_uri,
+    state: payload.state ?? null,
+  });
   return res.data;
 };
 

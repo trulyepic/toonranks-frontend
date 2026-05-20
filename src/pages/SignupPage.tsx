@@ -1,11 +1,19 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import ReCAPTCHA from "react-google-recaptcha";
-import { signup } from "../api/manApi";
+import { createMobileAuthCode, signup } from "../api/manApi";
+import type { AuthResponse } from "../api/manApi";
 import GoogleOAuthButton from "../components/GoogleOAuthButton";
 import AuthShell from "../components/AuthShell";
 import { NoIndexSeo } from "../components/Seo";
 import { SITE_NAME } from "../config/site";
+import { useUser } from "../login/useUser";
+import { scheduleLogoutAtJwtExp } from "../util/authUtils";
+import {
+  buildMobileSignupVerificationRedirect,
+  getMobileAuthRequest,
+  redirectToMobileAuthCallback,
+} from "../util/mobileAuthRedirect";
 
 const fieldClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#4a3c33] dark:focus:bg-[#181310] dark:focus:ring-[#2a221c]";
@@ -14,11 +22,32 @@ const SignupPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
+  const { setUser } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [captchaToken, setCaptchaToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const mobileAuthRequest = getMobileAuthRequest(location.search);
+
+  const finishAuthenticatedSession = async (data: AuthResponse) => {
+    setUser(data.user);
+    localStorage.setItem("token", data.access_token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    scheduleLogoutAtJwtExp(setUser, data.access_token);
+
+    if (mobileAuthRequest.isMobile && mobileAuthRequest.redirectUri) {
+      const mobileCode = await createMobileAuthCode({
+        redirect_uri: mobileAuthRequest.redirectUri,
+        state: mobileAuthRequest.state,
+      });
+      redirectToMobileAuthCallback(mobileCode.redirect_url);
+      return;
+    }
+
+    navigate("/");
+  };
 
   const handleSignup = async () => {
     const u = username.trim();
@@ -47,6 +76,12 @@ const SignupPage = () => {
       });
 
       setInfo("Signup successful. Please verify your email.");
+      const mobileRedirect =
+        buildMobileSignupVerificationRedirect(mobileAuthRequest);
+      if (mobileRedirect) {
+        redirectToMobileAuthCallback(mobileRedirect);
+        return;
+      }
       navigate("/check-your-email");
     } catch (err) {
       const raw = err instanceof Error ? err.message : "0:Signup failed";
@@ -197,7 +232,7 @@ const SignupPage = () => {
         </div>
 
         <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))]">
-          <GoogleOAuthButton />
+          <GoogleOAuthButton onAuthenticated={finishAuthenticatedSession} />
         </div>
       </div>
     </AuthShell>
