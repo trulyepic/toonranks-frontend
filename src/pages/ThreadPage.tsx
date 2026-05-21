@@ -16,7 +16,7 @@ import {
   updateForumThreadSettings,
   getPublicReadingList,
   editForumPost,
-  toggleHeart,
+  setForumPostVote,
   getForumThreadPaged,
 } from "../api/manApi";
 import { useUser } from "../login/useUser";
@@ -32,7 +32,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize"; // Re-enable re
 import { ConfirmModal } from "../components/ConfirmModal";
 import { useNotice } from "../hooks/useNotice";
 import { NoticeModal } from "../components/NoticeModal";
-import { HeartButton } from "../components/HeartButton";
+import { PostVoteControl, type ForumVote } from "../components/PostVoteControl";
 import UserAvatar from "../components/UserAvatar";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import {
@@ -564,7 +564,7 @@ export default function ThreadPage() {
   const modifiedTime = op ? new Date(op.updated_at).toISOString() : undefined;
 
   // Engagement signals
-  const likeCount = op?.heart_count ?? 0;
+  const upvoteCount = op?.upvote_count ?? op?.heart_count ?? 0;
   // const commentCount = Math.max(0, posts.length - 1);
   const commentCount = Math.max(0, (thread?.post_count ?? 0) - 1);
 
@@ -582,11 +582,11 @@ export default function ThreadPage() {
       ? { "@type": "Person", name: op.author_username }
       : undefined,
     interactionStatistic: [
-      likeCount > 0
+      upvoteCount > 0
         ? {
             "@type": "InteractionCounter",
             interactionType: { "@type": "LikeAction" },
-            userInteractionCount: likeCount,
+            userInteractionCount: upvoteCount,
           }
         : null,
       commentCount > 0
@@ -913,21 +913,6 @@ export default function ThreadPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-start lg:justify-end">
-                  <HeartButton
-                    initialOn={!!posts[0].viewer_has_hearted}
-                    initialCount={posts[0].heart_count ?? 0}
-                    ariaLabelBase="Heart this post"
-                    onToggle={async () => {
-                      try {
-                        const r = await toggleHeart(threadId, posts[0].id);
-                        return { ok: true, count: r.count, hearted: r.hearted };
-                      } catch {
-                        return { ok: false };
-                      }
-                    }}
-                  />
-                </div>
               </div>
             </div>
 
@@ -951,6 +936,32 @@ export default function ThreadPage() {
                     {posts[0].content_markdown}
                   </MarkdownProse>
                 )}
+                <div className="mt-5 border-t border-slate-200/80 pt-4 dark:border-[#3a3028]">
+                  <PostVoteControl
+                    initialVote={(posts[0].viewer_vote ?? null) as ForumVote | null}
+                    initialUpvotes={posts[0].upvote_count ?? posts[0].heart_count ?? 0}
+                    initialDownvotes={posts[0].downvote_count ?? 0}
+                    label="Original post votes"
+                    onVote={async (vote) => {
+                      try {
+                        const result = await setForumPostVote(threadId, posts[0].id, vote);
+                        return {
+                          ok: true,
+                          viewerVote: result.viewer_vote,
+                          upvoteCount: result.upvote_count,
+                          downvoteCount: result.downvote_count,
+                        };
+                      } catch {
+                        notice.show({
+                          title: "Action failed",
+                          message: "Could not update your vote.",
+                          variant: "error",
+                        });
+                        return { ok: false };
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               {(() => {
@@ -1190,6 +1201,7 @@ function ReplyBranch({
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
+  const [replyComposerOpen, setReplyComposerOpen] = useState(false);
 
   function lightenHex(hex: string, amount = 0.35) {
     const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -1379,10 +1391,41 @@ function ReplyBranch({
           </div>
         ) : null}
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-200/70 pt-4 dark:border-[#3a3028]">
+          <PostVoteControl
+            initialVote={(post.viewer_vote ?? null) as ForumVote | null}
+            initialUpvotes={post.upvote_count ?? post.heart_count ?? 0}
+            initialDownvotes={post.downvote_count ?? 0}
+            label="Reply votes"
+            onVote={async (vote) => {
+              try {
+                const result = await setForumPostVote(threadId, post.id, vote);
+                return {
+                  ok: true,
+                  viewerVote: result.viewer_vote,
+                  upvoteCount: result.upvote_count,
+                  downvoteCount: result.downvote_count,
+                };
+              } catch {
+                notify({
+                  title: "Action failed",
+                  message: "Could not update your vote.",
+                  variant: "error",
+                });
+                return { ok: false };
+              }
+            }}
+          />
+
           {!isUpdatesMode ? (
             !locked || isAdmin ? (
-              <details className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.96),_rgba(18,15,12,0.96))]">
+              <details
+                open={replyComposerOpen}
+                onToggle={(event) => {
+                  setReplyComposerOpen(event.currentTarget.open);
+                }}
+                className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.96),_rgba(18,15,12,0.96))]"
+              >
                 <summary className="cursor-pointer list-none text-xs font-medium text-blue-700 marker:hidden dark:text-blue-300">
                   Reply in thread
                 </summary>
@@ -1405,6 +1448,7 @@ function ReplyBranch({
                           series_ids: seriesIds,
                           parent_id: post.id,
                         });
+                        setReplyComposerOpen(false);
                         await reload();
                       } catch (err: unknown) {
                         notify({
@@ -1423,26 +1467,6 @@ function ReplyBranch({
               </span>
             )
           ) : null}
-
-          <HeartButton
-            initialOn={!!post.viewer_has_hearted}
-            initialCount={post.heart_count ?? 0}
-            ariaLabelBase="Heart this reply"
-            onToggle={async () => {
-              try {
-                const r = await toggleHeart(threadId, post.id);
-                return { ok: true, count: r.count, hearted: r.hearted };
-              } catch {
-                // silent revert (AC says silent), but if you'd like:
-                notify({
-                  title: "Action failed",
-                  message: "Could not update like.",
-                  variant: "error",
-                });
-                return { ok: false };
-              }
-            }}
-          />
         </div>
       </article>
 

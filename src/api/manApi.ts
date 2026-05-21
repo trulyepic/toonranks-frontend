@@ -475,6 +475,9 @@ export type ForumPost = {
   updated_at: string;
   series_refs: ForumSeriesRef[];
   parent_id?: number | null;
+  upvote_count?: number;
+  downvote_count?: number;
+  viewer_vote?: "UPVOTE" | "DOWNVOTE" | null;
   heart_count?: number;
   viewer_has_hearted?: boolean;
 };
@@ -1596,5 +1599,22 @@ export async function toggleHeart(
   const res = await api.post<{ hearted: boolean; count: number }>(
     `/forum/threads/${thread_id}/posts/${post_id}/heart`
   );
+  return res.data;
+}
+
+export async function setForumPostVote(
+  thread_id: number,
+  post_id: number,
+  vote: "UPVOTE" | "DOWNVOTE" | null
+): Promise<{
+  viewer_vote: "UPVOTE" | "DOWNVOTE" | null;
+  upvote_count: number;
+  downvote_count: number;
+}> {
+  const res = await api.post<{
+    viewer_vote: "UPVOTE" | "DOWNVOTE" | null;
+    upvote_count: number;
+    downvote_count: number;
+  }>(`/forum/threads/${thread_id}/posts/${post_id}/vote`, { vote });
   return res.data;
 }
