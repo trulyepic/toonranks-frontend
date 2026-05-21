@@ -9,7 +9,7 @@ import {
   updateForumThread,
   listForumThreadsPaged,
 } from "../api/manApi";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "../login/useUser";
 import { Helmet } from "react-helmet";
 import {
@@ -137,6 +137,7 @@ function LegacyForumPager({
 void LegacyForumPager;
 
 export default function ForumPage() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [showNew, setShowNew] = useState(false);
@@ -352,7 +353,24 @@ export default function ForumPage() {
           return (
             <li
               key={t.id}
-              className="rounded-[1.75rem] border border-white/70 bg-white/40 p-4 shadow-sm ring-1 ring-black/5 backdrop-blur-md transition hover:bg-white/60 hover:shadow-md dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(29,24,20,0.98),rgba(21,17,14,0.98))] dark:ring-[rgba(255,255,255,0.03)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.4)] dark:hover:bg-[linear-gradient(145deg,rgba(35,28,23,0.98),rgba(24,20,16,0.98))]"
+              role="link"
+              tabIndex={0}
+              aria-label={`Open forum thread: ${stripMdHeading(t.title)}`}
+              onClick={(event) => {
+                const target = event.target as HTMLElement;
+                if (target.closest("a,button,input,textarea,select,summary")) {
+                  return;
+                }
+                navigate(`/forum/${t.id}`);
+              }}
+              onKeyDown={(event) => {
+                if (event.currentTarget !== event.target) return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  navigate(`/forum/${t.id}`);
+                }
+              }}
+              className="cursor-pointer rounded-[1.75rem] border border-white/70 bg-white/40 p-4 shadow-sm ring-1 ring-black/5 backdrop-blur-md transition hover:bg-white/60 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-200 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(29,24,20,0.98),rgba(21,17,14,0.98))] dark:ring-[rgba(255,255,255,0.03)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.4)] dark:hover:bg-[linear-gradient(145deg,rgba(35,28,23,0.98),rgba(24,20,16,0.98))] dark:focus:ring-blue-950/50"
             >
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
