@@ -28,7 +28,8 @@ const CheckYourEmailPage = () => {
         </p>
         <p className="mb-6 text-sm text-slate-600 dark:text-stone-400">
           If you don't see it in your inbox, check your <strong>Spam</strong> or{" "}
-          <strong>Promotions</strong> folder.
+          <strong>Promotions</strong> folder. If it is there, mark it as{" "}
+          <strong>Not Spam</strong> before opening the link.
         </p>
         <p className="text-xs text-slate-400 dark:text-stone-500">
           Redirecting to login in 10 seconds...

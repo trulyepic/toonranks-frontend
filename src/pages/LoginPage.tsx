@@ -89,7 +89,9 @@ const LoginPage = () => {
       const detail = rest.join(":").trim();
 
       if (statusCode === "403" && detail === "Email not verified") {
-        setError("Email not verified. Please check your inbox or spam folder.");
+        setError(
+          "Email not verified. Please check your inbox and Spam folder. If the verification email is in Spam, mark it as Not Spam."
+        );
         setShowResend(true);
       } else if (statusCode === "401" && detail === "Invalid credentials") {
         setError("Invalid username or password.");
@@ -120,10 +122,15 @@ const LoginPage = () => {
         username: !resendEmail ? username : undefined,
         captcha_token: resendCaptcha || undefined,
       });
-      setResendMsg(message || "If an account exists, a new link was sent.");
+      setResendMsg(
+        message ||
+          "If an account exists, a new link was sent. Check Spam too, and mark the email as Not Spam if it lands there."
+      );
     } catch (err) {
       console.error("Resend error:", (err as Error).message || err);
-      setResendMsg("If an account exists, a new link was sent.");
+      setResendMsg(
+        "If an account exists, a new link was sent. Check Spam too, and mark the email as Not Spam if it lands there."
+      );
     } finally {
       setResending(false);
       setResendCaptcha("");
@@ -233,7 +240,8 @@ const LoginPage = () => {
               </h3>
               <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                 If your verification link expired, enter the email used for
-                signup and we'll send another one.
+                signup and we'll send another one. Check Spam too, and mark the
+                message as Not Spam if it lands there.
               </p>
             </div>
 
