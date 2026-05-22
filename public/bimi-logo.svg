@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps" viewBox="0 0 512 512">
+  <title>Toon Ranks</title>
+  <rect width="512" height="512" fill="#0b1118"/>
+  <g fill="#82c9f5" font-family="Arial Black, Impact, sans-serif" font-weight="900" text-anchor="middle">
+    <text x="256" y="224" font-size="134" letter-spacing="-5" transform="rotate(3 256 224)">TOON</text>
+    <text x="256" y="364" font-size="124" letter-spacing="-6" transform="rotate(-4 256 364)">RANKS</text>
+  </g>
+</svg>
