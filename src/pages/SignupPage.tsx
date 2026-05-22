@@ -75,7 +75,9 @@ const SignupPage = () => {
         captcha_token: captchaToken,
       });
 
-      setInfo("Signup successful. Please verify your email.");
+      setInfo(
+        "Signup successful. Please check your inbox and Spam folder for the verification email."
+      );
       const mobileRedirect =
         buildMobileSignupVerificationRedirect(mobileAuthRequest);
       if (mobileRedirect) {
@@ -132,7 +134,9 @@ const SignupPage = () => {
             Sign Up
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Create your account and verify your email to get started.
+            Create your account and verify your email to get started. If the
+            verification email lands in Spam, mark it as Not Spam so future
+            messages arrive normally.
           </p>
         </div>
 

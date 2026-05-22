@@ -27,9 +27,14 @@ const VerifyEmailPage = () => {
         email: email || undefined,
         captcha_token: resendCaptcha || undefined,
       });
-      setResendMsg(message || "If an account exists, a new link was sent.");
+      setResendMsg(
+        message ||
+          "If an account exists, a new link was sent. Check Spam too, and mark the email as Not Spam if it lands there."
+      );
     } catch {
-      setResendMsg("If an account exists, a new link was sent.");
+      setResendMsg(
+        "If an account exists, a new link was sent. Check Spam too, and mark the email as Not Spam if it lands there."
+      );
     } finally {
       setResending(false);
       setResendCaptcha("");
@@ -87,6 +92,10 @@ const VerifyEmailPage = () => {
             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-stone-200">
               Enter your email to resend:
             </label>
+            <p className="mb-3 text-sm leading-6 text-slate-600 dark:text-stone-300">
+              After resending, check your inbox and Spam folder. If the email is
+              in Spam, mark it as Not Spam before using the link.
+            </p>
             <input
               type="email"
               value={email}
