@@ -9,6 +9,7 @@ import {
 import type { AuthResponse } from "../api/manApi";
 import GoogleOAuthButton from "../components/GoogleOAuthButton";
 import AuthShell from "../components/AuthShell";
+import PasswordField from "../components/PasswordField";
 import { scheduleLogoutAtJwtExp } from "../util/authUtils";
 import { useUser } from "../login/useUser";
 import { NoIndexSeo } from "../components/Seo";
@@ -188,18 +189,18 @@ const LoginPage = () => {
                 Password
               </span>
               <Link
-                to="/signup"
+                to="/forgot-password"
                 className="text-xs font-medium text-slate-500 transition hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               >
-                Need an account?
+                Forgot password?
               </Link>
             </div>
-            <input
-              type="password"
+            <PasswordField
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               className={fieldClass}
+              autoComplete="current-password"
             />
           </label>
         </div>

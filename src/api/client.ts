@@ -32,7 +32,9 @@ function isPublicAuthRoute(url?: string) {
     url.startsWith("/auth/signup") ||
     url.startsWith("/auth/verify-email") ||
     url.startsWith("/auth/google-oauth") ||
-    url.startsWith("/auth/resend-verification")
+    url.startsWith("/auth/resend-verification") ||
+    url.startsWith("/auth/forgot-password") ||
+    url.startsWith("/auth/reset-password")
   );
 }
 

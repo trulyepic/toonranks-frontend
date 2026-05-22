@@ -5,6 +5,7 @@ import { createMobileAuthCode, signup } from "../api/manApi";
 import type { AuthResponse } from "../api/manApi";
 import GoogleOAuthButton from "../components/GoogleOAuthButton";
 import AuthShell from "../components/AuthShell";
+import PasswordField from "../components/PasswordField";
 import { NoIndexSeo } from "../components/Seo";
 import { SITE_NAME } from "../config/site";
 import { useUser } from "../login/useUser";
@@ -196,12 +197,12 @@ const SignupPage = () => {
                 Already registered?
               </Link>
             </div>
-            <input
-              type="password"
+            <PasswordField
               placeholder="Create a password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               className={fieldClass}
+              autoComplete="new-password"
             />
           </label>
         </div>

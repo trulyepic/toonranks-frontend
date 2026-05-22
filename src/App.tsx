@@ -4,6 +4,8 @@ import Header from "./components/Header";
 import Home from "./pages/Home";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import SeriesDetailPage from "./pages/SeriesDetailPage";
 import FilteredSeriesPage from "./pages/FilteredSeriesPage";
 import { SearchProvider } from "./components/SearchContext";
@@ -49,6 +51,11 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
+                <Route
+                  path="/forgot-password"
+                  element={<ForgotPasswordPage />}
+                />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/series/:id" element={<SeriesDetailPage />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/verify-email" element={<VerifyEmailPage />} />
