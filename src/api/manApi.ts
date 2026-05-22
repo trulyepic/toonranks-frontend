@@ -854,6 +854,44 @@ export const resendVerificationEmail = async (payload: {
   return res.data;
 };
 
+export const forgotPassword = async (payload: {
+  email: string;
+  captcha_token?: string;
+}): Promise<{ message: string }> => {
+  try {
+    const res = await api.post<{ message: string }>("/auth/forgot-password", {
+      email: payload.email.trim().toLowerCase(),
+      captcha_token: payload.captcha_token || undefined,
+    });
+    return res.data;
+  } catch (err: unknown) {
+    const detail = extractApiDetail(
+      err,
+      "Unable to send reset link. Please try again."
+    );
+    throw new Error(detail);
+  }
+};
+
+export const resetPassword = async (payload: {
+  token: string;
+  password: string;
+}): Promise<{ message: string }> => {
+  try {
+    const res = await api.post<{ message: string }>("/auth/reset-password", {
+      token: payload.token,
+      password: payload.password,
+    });
+    return res.data;
+  } catch (err: unknown) {
+    const detail = extractApiDetail(
+      err,
+      "Reset link is invalid or expired. Please request a new link."
+    );
+    throw new Error(detail);
+  }
+};
+
 export const uploadMyAvatar = async (file: File): Promise<UserAvatar> => {
   const form = new FormData();
   form.append("file", file);
