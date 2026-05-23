@@ -738,8 +738,11 @@ export default function ThreadPage() {
         </script>
       </Helmet>
 
-{thread && (
-        <header className="mb-4 space-y-3">
+{!thread ? (
+        <ThreadPageSkeleton />
+      ) : (
+        <>
+      <header className="mb-4 space-y-3">
           <Link
             to="/forum"
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.96),_rgba(21,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]"
@@ -876,7 +879,6 @@ export default function ThreadPage() {
             </div>
           ) : null}
         </header>
-      )}
 
       <section className="space-y-4">
         {posts[0] && (
@@ -1251,13 +1253,71 @@ export default function ThreadPage() {
           )}
         </div>
       </div>
-            <NoticeModal
+        </>
+      )}
+      <NoticeModal
         open={notice.open}
         title={notice.title}
         message={notice.message}
         variant={notice.variant}
         onClose={notice.hide}
       />
+    </div>
+  );
+}
+
+function ThreadPageSkeleton() {
+  const block = "rounded bg-slate-200 dark:bg-slate-700/50";
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="mb-4 space-y-3">
+        <div className={`h-8 w-28 rounded-full ${block}`} />
+        <div className={`h-7 w-2/3 ${block}`} />
+      </div>
+
+      {/* OP card */}
+      <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white dark:border-[#322922] dark:bg-[#1b1613]">
+        <div className="border-b border-slate-200/70 px-5 py-4 dark:border-[#322922] sm:px-7 sm:py-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className={`h-5 w-20 rounded-full ${block}`} />
+            <div className={`h-6 w-6 rounded-full ${block}`} />
+            <div className={`h-4 w-28 ${block}`} />
+            <div className={`h-4 w-32 ${block}`} />
+          </div>
+        </div>
+        <div className="px-5 py-5 sm:px-7 sm:py-6">
+          <div className="space-y-3 rounded-3xl border border-slate-200/80 p-4 dark:border-[#322922] sm:p-5">
+            <div className={`h-4 w-full ${block}`} />
+            <div className={`h-4 w-5/6 ${block}`} />
+            <div className={`h-4 w-3/4 ${block}`} />
+            <div className="mt-4 flex gap-3 border-t border-slate-200/80 pt-4 dark:border-[#3a3028]">
+              <div className={`h-8 w-16 rounded-full ${block}`} />
+              <div className={`h-8 w-16 rounded-full ${block}`} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Reply skeletons */}
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white dark:border-[#322922] dark:bg-[#1b1613]"
+        >
+          <div className="space-y-3 px-4 py-4 sm:px-5">
+            <div className="flex items-center gap-3">
+              <div className={`h-5 w-24 rounded-full ${block}`} />
+              <div className={`h-6 w-6 rounded-full ${block}`} />
+              <div className={`h-4 w-28 ${block}`} />
+            </div>
+            <div className={`h-4 w-3/4 ${block}`} />
+            <div className="flex gap-3">
+              <div className={`h-7 w-14 rounded-full ${block}`} />
+              <div className={`h-7 w-14 rounded-full ${block}`} />
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
