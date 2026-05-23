@@ -510,6 +510,8 @@ export default function ThreadPage() {
   // 🔧 edit state kept in ThreadPage and passed down
   const [editPostId, setEditPostId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState<string>("");
+  const [originalReplyComposerOpen, setOriginalReplyComposerOpen] =
+    useState(false);
 
   const notice = useNotice();
 
@@ -936,7 +938,7 @@ export default function ThreadPage() {
                     {posts[0].content_markdown}
                   </MarkdownProse>
                 )}
-                <div className="mt-5 border-t border-slate-200/80 pt-4 dark:border-[#3a3028]">
+                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-200/80 pt-4 dark:border-[#3a3028]">
                   <PostVoteControl
                     initialVote={(posts[0].viewer_vote ?? null) as ForumVote | null}
                     initialUpvotes={posts[0].upvote_count ?? posts[0].heart_count ?? 0}
@@ -961,8 +963,116 @@ export default function ThreadPage() {
                       }
                     }}
                   />
+                  {!thread?.latest_first ? (
+                    !thread?.locked || isAdmin ? (
+                      <details
+                        open={originalReplyComposerOpen}
+                        onToggle={(event) => {
+                          setOriginalReplyComposerOpen(event.currentTarget.open);
+                        }}
+                        className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.96),_rgba(18,15,12,0.96))]"
+                      >
+                        <summary className="cursor-pointer list-none text-xs font-medium text-blue-700 marker:hidden dark:text-blue-300">
+                          Reply
+                        </summary>
+                        <div className="mt-3 min-w-[min(42rem,calc(100vw-4rem))]">
+                          <RichReplyEditor
+                            compact
+                            threadId={threadId}
+                            onSubmit={async (content, seriesIds) => {
+                              if (!user) {
+                                notice.show({
+                                  message:
+                                    "You need to be logged in to post a reply.",
+                                  title: "Sign in required",
+                                  variant: "warning",
+                                });
+                                return;
+                              }
+
+                              const trimmed = content.trim();
+                              if (!trimmed) {
+                                notice.show({
+                                  message: "Reply cannot be empty.",
+                                  title: "Cannot post",
+                                  variant: "warning",
+                                });
+                                return;
+                              }
+
+                              try {
+                                const p = await createForumPost(threadId, {
+                                  content_markdown: trimmed,
+                                  series_ids: seriesIds,
+                                  parent_id: posts[0].id,
+                                });
+                                setPosts((prev) => [...prev, p]);
+                                setOriginalReplyComposerOpen(false);
+                              } catch (err: unknown) {
+                                notice.show({
+                                  message:
+                                    getErrorMessage(err) ||
+                                    "Failed to post reply.",
+                                  title: "Post failed",
+                                  variant: "error",
+                                });
+                              }
+                            }}
+                          />
+                        </div>
+                      </details>
+                    ) : (
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200">
+                        Replies are locked.
+                      </span>
+                    )
+                  ) : null}
                 </div>
               </div>
+
+              {(() => {
+                const byParent: Record<number, ForumPost[]> = {};
+                posts.slice(1).forEach((p) => {
+                  const pid = p.parent_id && p.parent_id > 0 ? p.parent_id : 0;
+                  (byParent[pid] ||= []).push(p);
+                });
+
+                const originalReplies = (byParent[posts[0].id] || []).sort(
+                  (a, b) =>
+                    new Date(a.created_at).getTime() -
+                    new Date(b.created_at).getTime()
+                );
+
+                return originalReplies.length ? (
+                  <div className="mt-3 space-y-2">
+                    {originalReplies.map((p, idx) => (
+                      <ReplyBranch
+                        key={p.id}
+                        post={p}
+                        depth={1}
+                        topIndex={idx + 1}
+                        byParent={byParent}
+                        parentLabel="Reply to original post"
+                        threadId={threadId}
+                        reload={load}
+                        isAdmin={isAdmin}
+                        currentUsername={user?.username || null}
+                        locked={!!thread?.locked}
+                        isUpdatesMode={!!thread?.latest_first}
+                        editingPostId={editPostId}
+                        editInitial={editContent}
+                        onBeginEdit={handleBeginEdit}
+                        onSaveEdit={handleSaveEdit}
+                        onCancelEdit={handleCancelEdit}
+                        onPostCreated={(post) =>
+                          setPosts((prev) => [...prev, post])
+                        }
+                        notify={notice.show}
+                      />
+                    ))}
+                  </div>
+                ) : null;
+              })()}
 
               {(() => {
                 const firstRefs: ForumSeriesRef[] =
@@ -1062,6 +1172,9 @@ export default function ThreadPage() {
                   onBeginEdit={handleBeginEdit}
                   onSaveEdit={handleSaveEdit}
                   onCancelEdit={handleCancelEdit}
+                  onPostCreated={(post) =>
+                    setPosts((prev) => [...prev, post])
+                  }
                   notify={notice.show}
                 />
               ))}
@@ -1154,6 +1267,8 @@ function ReplyBranch({
   depth,
   topIndex,
   byParent,
+  parentAuthorUsername,
+  parentLabel,
   threadId,
   reload,
   isAdmin,
@@ -1166,12 +1281,15 @@ function ReplyBranch({
   onBeginEdit,
   onSaveEdit,
   onCancelEdit,
+  onPostCreated,
   notify,
 }: {
   post: ForumPost;
   depth: number;
   topIndex: number;
   byParent: Record<number, ForumPost[]>;
+  parentAuthorUsername?: string | null;
+  parentLabel?: string;
   threadId: number;
   reload: () => Promise<void>;
   isAdmin: boolean;
@@ -1184,6 +1302,7 @@ function ReplyBranch({
   onBeginEdit: (postId: number, content: string) => void;
   onSaveEdit: (content: string, seriesIds: number[]) => Promise<void> | void;
   onCancelEdit: () => void;
+  onPostCreated: (post: ForumPost) => void;
   notify: (opts: {
     title?: string;
     message: string | React.ReactNode;
@@ -1242,7 +1361,8 @@ function ReplyBranch({
       : `Reply ${idxRoman}`
     : isUpdatesMode
     ? `Comment on update ${idxRoman}`
-    : `Reply to ${post.author_username ? `@${post.author_username}` : "thread"}`;
+    : parentLabel ||
+      `Reply to ${parentAuthorUsername ? `@${parentAuthorUsername}` : "thread"}`;
 
   const children = (byParent[post.id] || []).sort(
     (a, b) =>
@@ -1298,7 +1418,7 @@ function ReplyBranch({
         }
         style={{
           marginLeft: indentPx,
-          marginTop: 8,
+          marginTop: isTopLevel ? 8 : 4,
           borderLeftWidth: 4,
           borderLeftStyle: "solid",
           borderLeftColor: rail,
@@ -1427,7 +1547,7 @@ function ReplyBranch({
                 className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.96),_rgba(18,15,12,0.96))]"
               >
                 <summary className="cursor-pointer list-none text-xs font-medium text-blue-700 marker:hidden dark:text-blue-300">
-                  Reply in thread
+                  Reply
                 </summary>
                 <div className="mt-3">
                   <RichReplyEditor
@@ -1443,13 +1563,13 @@ function ReplyBranch({
                         return;
                       }
                       try {
-                        await createForumPost(threadId, {
+                        const createdPost = await createForumPost(threadId, {
                           content_markdown: content.trim(),
                           series_ids: seriesIds,
                           parent_id: post.id,
                         });
                         setReplyComposerOpen(false);
-                        await reload();
+                        onPostCreated(createdPost);
                       } catch (err: unknown) {
                         notify({
                           message: getErrorMessage(err) || "Failed to post reply.",
@@ -1499,6 +1619,7 @@ function ReplyBranch({
           depth={depth + 1}
           topIndex={topIndex}
           byParent={byParent}
+          parentAuthorUsername={post.author_username}
           threadId={threadId}
           reload={reload}
           isAdmin={isAdmin}
@@ -1511,6 +1632,7 @@ function ReplyBranch({
           onBeginEdit={onBeginEdit}
           onSaveEdit={onSaveEdit}
           onCancelEdit={onCancelEdit}
+          onPostCreated={onPostCreated}
           notify={notify}
         />
       ))}
