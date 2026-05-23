@@ -1,5 +1,5 @@
 import { CheckIcon, PhotoIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
@@ -21,6 +21,7 @@ type CropDraft = {
 };
 
 const AVATAR_OUTPUT_SIZE = 512;
+const DRAG_SENSITIVITY = 0.2;
 
 function saveUser(nextUser: User, setUser: (user: User) => void) {
   localStorage.setItem("user", JSON.stringify(nextUser));
@@ -96,21 +97,66 @@ async function buildCroppedAvatarFile(
 export default function AccountPage() {
   const { user, setUser } = useUser();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = useRef(false);
+  const lastPosRef = useRef({ x: 0, y: 0 });
+  const draftRef = useRef<CropDraft | null>(null);
+
   const [draft, setDraft] = useState<CropDraft | null>(null);
   const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [saving, setSaving] = useState(false);
 
+  // Keep draftRef in sync so the wheel handler can read it without a stale closure
+  draftRef.current = draft;
+
   const activePreset = normalizeAvatarPreset(user?.avatar_preset);
+
   const previewStyle = useMemo(() => {
     if (!draft) return undefined;
     return {
       backgroundImage: `url(${draft.objectUrl})`,
       backgroundPosition: `${50 + offsetX / 2}% ${50 + offsetY / 2}%`,
       backgroundSize: `${zoom * 100}%`,
+      backgroundRepeat: "no-repeat" as const,
     };
   }, [draft, offsetX, offsetY, zoom]);
+
+  // Non-passive wheel listener so we can call preventDefault and prevent page scroll
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+
+    const handler = (e: WheelEvent) => {
+      if (!draftRef.current) return;
+      e.preventDefault();
+      setZoom((prev) => clamp(prev + -e.deltaY * 0.005, 1, 3));
+    };
+
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draft) return;
+    isDraggingRef.current = true;
+    lastPosRef.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - lastPosRef.current.x;
+    const dy = e.clientY - lastPosRef.current.y;
+    lastPosRef.current = { x: e.clientX, y: e.clientY };
+    setOffsetX((prev) => clamp(prev - dx * DRAG_SENSITIVITY, -50, 50));
+    setOffsetY((prev) => clamp(prev - dy * DRAG_SENSITIVITY, -50, 50));
+  };
+
+  const handlePointerUp = () => {
+    isDraggingRef.current = false;
+  };
 
   const updateUserAvatar = (patch: {
     avatar_url?: string | null;
@@ -153,12 +199,7 @@ export default function AccountPage() {
     if (!user || !draft) return;
     setSaving(true);
     try {
-      const croppedFile = await buildCroppedAvatarFile(
-        draft,
-        zoom,
-        offsetX,
-        offsetY
-      );
+      const croppedFile = await buildCroppedAvatarFile(draft, zoom, offsetX, offsetY);
       const avatar = await uploadMyAvatar(croppedFile);
       updateUserAvatar({
         avatar_url: avatar.avatar_url ?? null,
@@ -217,9 +258,7 @@ export default function AccountPage() {
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <NoIndexSeo title="Account | Toon Ranks" />
         <div className="rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-sm dark-theme-card">
-          <h1 className="text-3xl font-black text-slate-950 dark:text-white">
-            Account
-          </h1>
+          <h1 className="text-3xl font-black text-slate-950 dark:text-white">Account</h1>
           <p className="mt-3 text-slate-600 dark:text-slate-300">
             Log in to update your Toon Ranks avatar and account preferences.
           </p>
@@ -246,12 +285,13 @@ export default function AccountPage() {
           Your profile
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
-          Set the avatar that appears with your Toon Ranks identity. Uploaded
-          images are cropped square and stored at a standard size.
+          Set the avatar that appears with your Toon Ranks identity. Uploaded images are
+          cropped square and stored at a standard size.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        {/* Left panel: current avatar + upload controls */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark-theme-card">
           <div className="flex flex-col items-center text-center">
             <UserAvatar
@@ -261,11 +301,7 @@ export default function AccountPage() {
               size="xl"
               className="h-28 w-28 text-4xl"
             />
-            <h2
-              className={`mt-5 text-2xl font-black ${usernameClassName(
-                user.role
-              )}`}
-            >
+            <h2 className={`mt-5 text-2xl font-black ${usernameClassName(user.role)}`}>
               {user.username}
             </h2>
             <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
@@ -293,31 +329,32 @@ export default function AccountPage() {
           <button
             type="button"
             onClick={handleReset}
-            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#342b24] dark:bg-[#181310] dark:text-slate-200 dark:hover:bg-[#241d19]"
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#342b24] dark:text-slate-400 dark:hover:bg-[#241d19]"
             disabled={saving}
           >
-            <TrashIcon className="h-5 w-5" />
-            Reset uploaded image
+            <TrashIcon className="h-4 w-4" />
+            Reset to default
           </button>
         </section>
 
+        {/* Right panel: crop editor + presets */}
         <section className="space-y-6">
+          {/* Crop editor */}
           <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark-theme-card">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black text-slate-950 dark:text-white">
-                  Crop uploaded image
+                  Crop your photo
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Pick the part of the image you want to use, then save it as a
-                  square avatar.
+                  Drag to reposition · Scroll or use the slider to zoom.
                 </p>
               </div>
               {draft ? (
                 <button
                   type="button"
                   onClick={clearDraft}
-                  className="self-start rounded-full border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 dark:border-[#342b24] dark:text-slate-300 dark:hover:bg-[#241d19]"
+                  className="shrink-0 self-start rounded-full border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50 dark:border-[#342b24] dark:text-slate-300 dark:hover:bg-[#241d19]"
                 >
                   Clear
                 </button>
@@ -325,61 +362,57 @@ export default function AccountPage() {
             </div>
 
             {draft ? (
-              <div className="mt-6 grid gap-6 md:grid-cols-[260px_minmax(0,1fr)]">
-                <div className="mx-auto flex h-64 w-64 items-center justify-center overflow-hidden rounded-[32px] border border-slate-200 bg-slate-950 shadow-inner dark:border-[#342b24]">
-                  <div
-                    className="h-full w-full bg-cover bg-center"
-                    style={previewStyle}
-                    role="img"
-                    aria-label="Avatar crop preview"
-                  />
-                </div>
+              <div className="mt-6 flex flex-col items-center gap-5">
+                {/* Circular draggable preview */}
+                <div
+                  ref={previewRef}
+                  role="img"
+                  aria-label="Avatar crop preview — drag to reposition"
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                  className="h-64 w-64 cursor-grab select-none touch-none overflow-hidden rounded-full border-2 border-slate-200 bg-slate-950 shadow-inner active:cursor-grabbing dark:border-[#342b24]"
+                  style={previewStyle}
+                />
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  This is how your avatar will appear across Toon Ranks.
+                </p>
 
-                <div className="space-y-5">
-                  <label className="block">
+                {/* Zoom control */}
+                <div className="w-full max-w-xs space-y-4">
+                  <div>
                     <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
                       Zoom
                     </span>
-                    <input
-                      type="range"
-                      min="1"
-                      max="3"
-                      step="0.05"
-                      value={zoom}
-                      onChange={(event) => setZoom(Number(event.target.value))}
-                      className="mt-3 w-full accent-blue-600"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                      Move left/right
-                    </span>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={offsetX}
-                      onChange={(event) => setOffsetX(Number(event.target.value))}
-                      className="mt-3 w-full accent-blue-600"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                      Move up/down
-                    </span>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      step="1"
-                      value={offsetY}
-                      onChange={(event) => setOffsetY(Number(event.target.value))}
-                      className="mt-3 w-full accent-blue-600"
-                    />
-                  </label>
+                    <div className="mt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        aria-label="Zoom out"
+                        onClick={() => setZoom((z) => clamp(z - 0.15, 1, 3))}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-lg font-bold text-slate-600 transition hover:bg-slate-50 dark:border-[#342b24] dark:text-slate-300 dark:hover:bg-[#241d19]"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="range"
+                        min="1"
+                        max="3"
+                        step="0.05"
+                        value={zoom}
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                        className="flex-1 accent-blue-600"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Zoom in"
+                        onClick={() => setZoom((z) => clamp(z + 0.15, 1, 3))}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-lg font-bold text-slate-600 transition hover:bg-slate-50 dark:border-[#342b24] dark:text-slate-300 dark:hover:bg-[#241d19]"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
 
                   <button
                     type="button"
@@ -388,24 +421,30 @@ export default function AccountPage() {
                     className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
                   >
                     <CheckIcon className="h-5 w-5" />
-                    {saving ? "Saving..." : "Save cropped avatar"}
+                    {saving ? "Saving…" : "Save avatar"}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500 dark:border-[#342b24] dark:bg-[#181310] dark:text-slate-400">
-                Choose an image to open the crop controls.
+              <div className="mt-6 rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500 dark:border-[#342b24] dark:bg-[#181310] dark:text-slate-400">
+                Choose an image to start cropping.
               </div>
             )}
           </div>
 
+          {/* Default avatar presets */}
           <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark-theme-card">
             <h2 className="text-2xl font-black text-slate-950 dark:text-white">
               Default avatars
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Prefer not to upload an image? Pick a default avatar color.
+              Prefer not to upload a photo? Pick a default avatar color.
             </p>
+            {user.avatar_url ? (
+              <p className="mt-2 text-sm font-semibold text-amber-600 dark:text-amber-400">
+                Selecting a preset will remove your uploaded photo.
+              </p>
+            ) : null}
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               {(Object.keys(AVATAR_PRESETS) as AvatarPreset[]).map((preset) => {
