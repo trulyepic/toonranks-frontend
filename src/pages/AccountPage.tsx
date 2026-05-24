@@ -7,6 +7,7 @@ import {
   selectMyAvatarPreset,
   uploadMyAvatar,
 } from "../api/manApi";
+import { ForumActivitySection } from "../components/ForumActivitySection";
 import UserAvatar from "../components/UserAvatar";
 import { NoIndexSeo } from "../components/Seo";
 import { useUser } from "../login/useUser";
@@ -290,7 +291,7 @@ export default function AccountPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]" data-testid="avatar-grid">
         {/* Left panel: current avatar + upload controls */}
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark-theme-card">
           <div className="flex flex-col items-center text-center">
@@ -484,6 +485,8 @@ export default function AccountPage() {
           </div>
         </section>
       </div>
+
+      <ForumActivitySection />
     </div>
   );
 }
