@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ForumThread, ForumPost, Paginated } from "../api/manApi";
 import { getMyForumThreads, getMyForumPosts, getMyForumVotes } from "../api/manApi";
+import { mdToPlainText } from "../util/strings";
 
 type Tab = "threads" | "posts" | "votes";
 
@@ -263,7 +264,7 @@ export function ForumActivitySection() {
               className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-[#342b24] dark:bg-[#181310]"
             >
               <p className="text-sm leading-relaxed text-slate-700 dark:text-stone-200">
-                {truncate(p.content_markdown)}
+                {truncate(mdToPlainText(p.content_markdown))}
               </p>
               {p.series_refs.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -320,7 +321,7 @@ export function ForumActivitySection() {
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="flex-1 text-sm leading-relaxed text-slate-700 dark:text-stone-200">
-                  {truncate(p.content_markdown)}
+                  {truncate(mdToPlainText(p.content_markdown))}
                 </p>
                 {p.viewer_vote ? (
                   <span
