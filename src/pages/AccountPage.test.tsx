@@ -21,6 +21,7 @@ vi.mock("../api/manApi", async (importOriginal) => {
     getMyForumThreads: vi.fn().mockResolvedValue(emptyPage),
     getMyForumPosts: vi.fn().mockResolvedValue(emptyPage),
     getMyForumVotes: vi.fn().mockResolvedValue(emptyPage),
+    getMySeriesVotes: vi.fn().mockResolvedValue(emptyPage),
   };
 });
 

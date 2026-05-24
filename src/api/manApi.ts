@@ -1667,6 +1667,32 @@ export async function getMyForumVotes(
   return res.data;
 }
 
+export type CategoryVote = {
+  category: string;
+  score: number;
+};
+
+export type MySeriesVote = {
+  series_id: number;
+  title?: string | null;
+  cover_url?: string | null;
+  type?: string | null;
+  status?: string | null;
+  votes: CategoryVote[];
+};
+
+export async function getMySeriesVotes(
+  page = 1,
+  page_size = 10,
+  signal?: AbortSignal
+): Promise<Paginated<MySeriesVote>> {
+  const res = await api.get<Paginated<MySeriesVote>>(
+    "/series-details/me/votes",
+    { params: { page, page_size }, signal }
+  );
+  return res.data;
+}
+
 export async function toggleHeart(
   thread_id: number,
   post_id: number
