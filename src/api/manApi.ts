@@ -466,6 +466,7 @@ export type ForumThread = {
 };
 export type ForumPost = {
   id: number;
+  thread_id?: number;
   author_username?: string | null;
   author_role?: UserRole | null;
   author_avatar_url?: string | null;

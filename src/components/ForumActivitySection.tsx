@@ -278,9 +278,19 @@ export function ForumActivitySection() {
                   ))}
                 </div>
               )}
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                {shortDate(p.created_at)}
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  {shortDate(p.created_at)}
+                </p>
+                {p.thread_id ? (
+                  <Link
+                    to={`/forum/${p.thread_id}`}
+                    className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    View thread →
+                  </Link>
+                ) : null}
+              </div>
             </div>
           ))}
           {postsData && (
@@ -325,9 +335,19 @@ export function ForumActivitySection() {
                   </span>
                 ) : null}
               </div>
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                {shortDate(p.created_at)}
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  {shortDate(p.created_at)}
+                </p>
+                {p.thread_id ? (
+                  <Link
+                    to={`/forum/${p.thread_id}`}
+                    className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    View thread →
+                  </Link>
+                ) : null}
+              </div>
             </div>
           ))}
           {votesData && (
