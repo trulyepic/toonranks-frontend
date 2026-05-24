@@ -1630,6 +1630,42 @@ export const uploadForumMedia = async (
   return res.data;
 };
 
+export async function getMyForumThreads(
+  page = 1,
+  page_size = 10,
+  signal?: AbortSignal
+): Promise<Paginated<ForumThread>> {
+  const res = await api.get<Paginated<ForumThread>>("/forum/me/threads", {
+    params: { page, page_size },
+    signal,
+  });
+  return res.data;
+}
+
+export async function getMyForumPosts(
+  page = 1,
+  page_size = 10,
+  signal?: AbortSignal
+): Promise<Paginated<ForumPost>> {
+  const res = await api.get<Paginated<ForumPost>>("/forum/me/posts", {
+    params: { page, page_size },
+    signal,
+  });
+  return res.data;
+}
+
+export async function getMyForumVotes(
+  page = 1,
+  page_size = 10,
+  signal?: AbortSignal
+): Promise<Paginated<ForumPost>> {
+  const res = await api.get<Paginated<ForumPost>>("/forum/me/votes", {
+    params: { page, page_size },
+    signal,
+  });
+  return res.data;
+}
+
 export async function toggleHeart(
   thread_id: number,
   post_id: number
