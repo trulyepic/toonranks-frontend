@@ -646,6 +646,19 @@ export default function ThreadPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId, page]);
 
+  // Scroll to a specific post when the URL contains a #post-{id} hash.
+  // Fires after posts finish loading so the target element is in the DOM.
+  useEffect(() => {
+    if (!posts.length || !loc.hash.startsWith("#post-")) return;
+    const el = document.getElementById(loc.hash.slice(1));
+    if (!el) return;
+    const timer = setTimeout(
+      () => el.scrollIntoView({ behavior: "smooth", block: "start" }),
+      80
+    );
+    return () => clearTimeout(timer);
+  }, [posts, loc.hash]);
+
   // Called by ReplyBranch → enters edit mode for a specific post
   const handleBeginEdit = (postId: number, content: string) => {
     setEditPostId(postId);
@@ -1471,6 +1484,7 @@ function ReplyBranch({
   return (
     <div className="space-y-2">
       <article
+        id={`post-${post.id}`}
         className={
           (isTopLevel
             ? "rounded-[24px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.96),_rgba(21,17,14,0.96))] dark:shadow-[0_14px_30px_rgba(0,0,0,0.5)] sm:px-5 sm:py-5"
