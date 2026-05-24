@@ -8,6 +8,7 @@ import {
   uploadMyAvatar,
 } from "../api/manApi";
 import { ForumActivitySection } from "../components/ForumActivitySection";
+import { SeriesRatingsSection } from "../components/SeriesRatingsSection";
 import UserAvatar from "../components/UserAvatar";
 import { NoIndexSeo } from "../components/Seo";
 import { useUser } from "../login/useUser";
@@ -487,6 +488,7 @@ export default function AccountPage() {
       </div>
 
       <ForumActivitySection />
+      <SeriesRatingsSection />
     </div>
   );
 }
