@@ -284,7 +284,7 @@ export function ForumActivitySection() {
                 </p>
                 {p.thread_id ? (
                   <Link
-                    to={`/forum/${p.thread_id}`}
+                    to={`/forum/${p.thread_id}#post-${p.id}`}
                     className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
                   >
                     View thread →
@@ -341,7 +341,7 @@ export function ForumActivitySection() {
                 </p>
                 {p.thread_id ? (
                   <Link
-                    to={`/forum/${p.thread_id}`}
+                    to={`/forum/${p.thread_id}#post-${p.id}`}
                     className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
                   >
                     View thread →
