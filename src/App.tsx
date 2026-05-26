@@ -27,6 +27,7 @@ import MySubmissionsPage from "./pages/MySubmissionsPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import AccountPage from "./pages/AccountPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import { useEffect, useState } from "react";
 import { SessionExpiredModal } from "./components/SessionExpiredModal";
 
@@ -88,6 +89,9 @@ function App() {
                   path="/lists/:token"
                   element={<PublicReadingListPage />}
                 />
+
+                {/* Catch-all — must be last */}
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
               <SessionExpiredModal
                 open={showExpired}
