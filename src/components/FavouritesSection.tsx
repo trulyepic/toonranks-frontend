@@ -10,7 +10,7 @@ import type { FavouriteSeries, RankedSeries } from "../api/manApi";
 import { FavouriteSearchModal } from "./FavouriteSearchModal";
 import { ConfirmModal } from "./ConfirmModal";
 
-const MAX_SLOTS = 6;
+const MAX_SLOTS = 15;
 
 export function FavouritesSection() {
   const [favourites, setFavourites] = useState<FavouriteSeries[]>([]);
@@ -88,7 +88,7 @@ export function FavouritesSection() {
 
         {loading ? (
           /* Skeleton */
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             {Array.from({ length: MAX_SLOTS }).map((_, i) => (
               <div
                 key={i}
@@ -97,7 +97,7 @@ export function FavouritesSection() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             {/* Filled slots */}
             {favourites.map((fav) => (
               <div key={fav.series_id} className="group relative aspect-[2/3]">
