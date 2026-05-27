@@ -8,6 +8,7 @@ import {
   uploadMyAvatar,
 } from "../api/manApi";
 import { ForumActivitySection } from "../components/ForumActivitySection";
+import { FavouritesSection } from "../components/FavouritesSection";
 import { SeriesRatingsSection } from "../components/SeriesRatingsSection";
 import UserAvatar from "../components/UserAvatar";
 import { NoIndexSeo } from "../components/Seo";
@@ -487,6 +488,7 @@ export default function AccountPage() {
         </section>
       </div>
 
+      <FavouritesSection />
       <ForumActivitySection />
       <SeriesRatingsSection />
     </div>
