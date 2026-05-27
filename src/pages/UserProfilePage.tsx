@@ -6,8 +6,6 @@ import UserAvatar from "../components/UserAvatar";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { SITE_NAME, SITE_ORIGIN } from "../config/site";
 
-const MAX_SLOTS = 6;
-
 function roleLabel(role: string): string {
   const r = (role || "").toUpperCase();
   if (r === "ADMIN") return "Admin";
@@ -67,8 +65,8 @@ export default function UserProfilePage() {
           </div>
           <div className="rounded-[2rem] border border-slate-200 bg-white p-8 dark:border-[#342b24] dark:bg-[#1b1612]">
             <div className="mb-5 h-6 w-40 rounded bg-slate-200 dark:bg-[#2e2520]" />
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-6">
-              {Array.from({ length: MAX_SLOTS }).map((_, i) => (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="aspect-[2/3] rounded-[18px] bg-slate-200 dark:bg-[#1e1712]" />
               ))}
             </div>
@@ -106,7 +104,6 @@ export default function UserProfilePage() {
 
   /* ── Profile ─────────────────────────────────────────────────────────── */
   const hasFavourites = profile.favourites.length > 0;
-  const emptySlots = MAX_SLOTS - profile.favourites.length;
   const hasLists = profile.reading_lists.length > 0;
 
   return (
@@ -186,9 +183,8 @@ export default function UserProfilePage() {
           )}
         </div>
 
-        {/* Grid: 2 cols mobile → 3 cols tablet+ */}
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
-          {/* Filled slots */}
+        {/* Grid: 2 cols mobile → 3 cols tablet → 5 cols desktop */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {profile.favourites.map((fav) => (
             <Link
               key={fav.series_id}
@@ -222,15 +218,6 @@ export default function UserProfilePage() {
               </div>
             </Link>
           ))}
-
-          {/* Empty placeholder slots */}
-          {hasFavourites &&
-            Array.from({ length: emptySlots }).map((_, i) => (
-              <div
-                key={`empty-${i}`}
-                className="aspect-[2/3] rounded-[18px] border-2 border-dashed border-slate-100 dark:border-[#2a2119]"
-              />
-            ))}
         </div>
       </div>
 
