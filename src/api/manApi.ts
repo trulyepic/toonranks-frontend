@@ -1719,3 +1719,36 @@ export async function setForumPostVote(
   }>(`/forum/threads/${thread_id}/posts/${post_id}/vote`, { vote });
   return res.data;
 }
+
+// ---------- Favourites ----------
+
+export interface FavouriteSeries {
+  series_id: number;
+  position: number;
+  title: string;
+  cover_url: string | null;
+  type: SeriesType | null;
+}
+
+export const getMyFavourites = async (): Promise<FavouriteSeries[]> => {
+  const res = await api.get<FavouriteSeries[]>("/auth/me/favourites");
+  return res.data;
+};
+
+export const replaceMyFavourites = async (
+  seriesIds: number[]
+): Promise<FavouriteSeries[]> => {
+  const res = await api.put<FavouriteSeries[]>("/auth/me/favourites", {
+    series_ids: seriesIds,
+  });
+  return res.data;
+};
+
+export const removeMyFavourite = async (
+  seriesId: number
+): Promise<FavouriteSeries[]> => {
+  const res = await api.delete<FavouriteSeries[]>(
+    `/auth/me/favourites/${seriesId}`
+  );
+  return res.data;
+};
