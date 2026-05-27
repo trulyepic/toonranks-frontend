@@ -1763,7 +1763,7 @@ export interface PublicFavourite {
   type: SeriesType | null;
 }
 
-export interface PublicReadingList {
+export interface ProfileReadingList {
   name: string;
   item_count: number;
   share_token: string;
@@ -1776,7 +1776,7 @@ export interface PublicProfile {
   avatar_preset: string | null;
   registered_at: string | null;
   favourites: PublicFavourite[];
-  reading_lists: PublicReadingList[];
+  reading_lists: ProfileReadingList[];
 }
 
 export const getPublicProfile = async (
