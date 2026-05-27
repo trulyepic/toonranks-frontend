@@ -439,20 +439,26 @@ export default function ForumPage() {
                     {t.author_username ? (
                       <span className="inline-flex items-center gap-1.5">
                         <span>- by</span>
-                        <UserAvatar
-                          username={t.author_username}
-                          avatarUrl={t.author_avatar_url}
-                          avatarPreset={t.author_avatar_preset}
-                          size="sm"
-                          className="h-6 w-6 text-[10px]"
-                        />
-                        <span
-                          className={`font-medium ${inlineUsernameClassName(
-                            t.author_role
-                          )}`}
+                        <Link
+                          to={`/user/${t.author_username}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 hover:underline"
                         >
-                          {t.author_username}
-                        </span>
+                          <UserAvatar
+                            username={t.author_username}
+                            avatarUrl={t.author_avatar_url}
+                            avatarPreset={t.author_avatar_preset}
+                            size="sm"
+                            className="h-6 w-6 text-[10px]"
+                          />
+                          <span
+                            className={`font-medium ${inlineUsernameClassName(
+                              t.author_role
+                            )}`}
+                          >
+                            {t.author_username}
+                          </span>
+                        </Link>
                       </span>
                     ) : null}
                   </div>

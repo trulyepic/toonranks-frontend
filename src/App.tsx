@@ -27,6 +27,7 @@ import MySubmissionsPage from "./pages/MySubmissionsPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import AccountPage from "./pages/AccountPage";
+import UserProfilePage from "./pages/UserProfilePage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useEffect, useState } from "react";
 import { SessionExpiredModal } from "./components/SessionExpiredModal";
@@ -77,6 +78,7 @@ function App() {
                 />
                 <Route path="/compare" element={<ComparePage />} />
                 <Route path="/account" element={<AccountPage />} />
+                <Route path="/user/:username" element={<UserProfilePage />} />
                 <Route path="/my-lists" element={<MyReadingListsPage />} />
                 <Route path="/my-submissions" element={<MySubmissionsPage />} />
                 <Route path="/pending-titles" element={<PendingTitlesPage />} />

@@ -904,16 +904,36 @@ export default function ThreadPage() {
                       Original post
                     </span>
                     <span className="inline-flex items-center gap-1.5 font-medium">
-                      <UserAvatar
-                        username={posts[0].author_username || "Anonymous"}
-                        avatarUrl={posts[0].author_avatar_url}
-                        avatarPreset={posts[0].author_avatar_preset}
-                        size="sm"
-                        className="h-6 w-6 text-[10px]"
-                      />
-                      <span className={inlineUsernameClassName(posts[0].author_role)}>
-                        {posts[0].author_username || "Anonymous"}
-                      </span>
+                      {posts[0].author_username ? (
+                        <Link
+                          to={`/user/${posts[0].author_username}`}
+                          className="inline-flex items-center gap-1.5 hover:underline"
+                        >
+                          <UserAvatar
+                            username={posts[0].author_username}
+                            avatarUrl={posts[0].author_avatar_url}
+                            avatarPreset={posts[0].author_avatar_preset}
+                            size="sm"
+                            className="h-6 w-6 text-[10px]"
+                          />
+                          <span className={inlineUsernameClassName(posts[0].author_role)}>
+                            {posts[0].author_username}
+                          </span>
+                        </Link>
+                      ) : (
+                        <>
+                          <UserAvatar
+                            username="Anonymous"
+                            avatarUrl={null}
+                            avatarPreset={null}
+                            size="sm"
+                            className="h-6 w-6 text-[10px]"
+                          />
+                          <span className={inlineUsernameClassName(null)}>
+                            Anonymous
+                          </span>
+                        </>
+                      )}
                     </span>
                     <span>{new Date(posts[0].created_at).toLocaleString()}</span>
                   </div>
@@ -1517,16 +1537,36 @@ function ReplyBranch({
               {labelText}
             </span>
             <span className="inline-flex items-center gap-1.5 font-medium">
-              <UserAvatar
-                username={post.author_username || "Anonymous"}
-                avatarUrl={post.author_avatar_url}
-                avatarPreset={post.author_avatar_preset}
-                size="sm"
-                className="h-6 w-6 text-[10px]"
-              />
-              <span className={inlineUsernameClassName(post.author_role)}>
-                {post.author_username || "Anonymous"}
-              </span>
+              {post.author_username ? (
+                <Link
+                  to={`/user/${post.author_username}`}
+                  className="inline-flex items-center gap-1.5 hover:underline"
+                >
+                  <UserAvatar
+                    username={post.author_username}
+                    avatarUrl={post.author_avatar_url}
+                    avatarPreset={post.author_avatar_preset}
+                    size="sm"
+                    className="h-6 w-6 text-[10px]"
+                  />
+                  <span className={inlineUsernameClassName(post.author_role)}>
+                    {post.author_username}
+                  </span>
+                </Link>
+              ) : (
+                <>
+                  <UserAvatar
+                    username="Anonymous"
+                    avatarUrl={null}
+                    avatarPreset={null}
+                    size="sm"
+                    className="h-6 w-6 text-[10px]"
+                  />
+                  <span className={inlineUsernameClassName(null)}>
+                    Anonymous
+                  </span>
+                </>
+              )}
             </span>
             <span>{new Date(post.created_at).toLocaleString()}</span>
           </div>

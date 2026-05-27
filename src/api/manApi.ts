@@ -1752,3 +1752,36 @@ export const removeMyFavourite = async (
   );
   return res.data;
 };
+
+// ---------- Public user profiles ----------
+
+export interface PublicFavourite {
+  series_id: number;
+  position: number;
+  title: string;
+  cover_url: string | null;
+  type: SeriesType | null;
+}
+
+export interface ProfileReadingList {
+  name: string;
+  item_count: number;
+  share_token: string;
+}
+
+export interface PublicProfile {
+  username: string;
+  role: string;
+  avatar_url: string | null;
+  avatar_preset: string | null;
+  registered_at: string | null;
+  favourites: PublicFavourite[];
+  reading_lists: ProfileReadingList[];
+}
+
+export const getPublicProfile = async (
+  username: string
+): Promise<PublicProfile> => {
+  const res = await api.get<PublicProfile>(`/users/${username}`);
+  return res.data;
+};
