@@ -1775,6 +1775,9 @@ export interface PublicProfile {
   avatar_url: string | null;
   avatar_preset: string | null;
   registered_at: string | null;
+  cred_score: number;
+  rank: number | null;
+  post_count: number;
   favourites: PublicFavourite[];
   reading_lists: ProfileReadingList[];
 }
@@ -1783,5 +1786,36 @@ export const getPublicProfile = async (
   username: string
 ): Promise<PublicProfile> => {
   const res = await api.get<PublicProfile>(`/users/${username}`);
+  return res.data;
+};
+
+// ---------- Leaderboard ----------
+
+export interface LeaderboardUser {
+  rank: number;
+  username: string;
+  role: string;
+  avatar_url: string | null;
+  avatar_preset: string | null;
+  cred_score: number;
+  post_count: number;
+  series_rated: number;
+}
+
+export interface LeaderboardPageOut {
+  items: LeaderboardUser[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export const getLeaderboard = async (
+  page = 1,
+  page_size = 50
+): Promise<LeaderboardPageOut> => {
+  const res = await api.get<LeaderboardPageOut>("/users/leaderboard", {
+    params: { page, page_size },
+  });
   return res.data;
 };
