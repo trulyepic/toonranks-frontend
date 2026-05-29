@@ -1,4 +1,4 @@
-import { CheckIcon, PhotoIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, PencilSquareIcon, PhotoIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -7,6 +7,7 @@ import {
   resetMyAvatar,
   selectMyAvatarPreset,
   uploadMyAvatar,
+  updateMyUsername,
 } from "../api/manApi";
 import { ForumActivitySection } from "../components/ForumActivitySection";
 import { FavouritesSection } from "../components/FavouritesSection";
@@ -117,6 +118,12 @@ export default function AccountPage() {
     rank: number | null;
     post_count: number;
   } | null>(null);
+
+  // Username change modal
+  const [usernameModalOpen, setUsernameModalOpen] = useState(false);
+  const [usernameInput, setUsernameInput] = useState("");
+  const [usernameSaving, setUsernameSaving] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
 
   // Keep draftRef in sync so the wheel handler can read it without a stale closure
   draftRef.current = draft;
@@ -254,6 +261,32 @@ export default function AccountPage() {
     }
   };
 
+  function openUsernameModal() {
+    setUsernameInput("");
+    setUsernameError(null);
+    setUsernameModalOpen(true);
+  }
+
+  async function handleUsernameSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setUsernameError(null);
+    setUsernameSaving(true);
+    try {
+      const updated = await updateMyUsername(usernameInput.trim());
+      saveUser({ ...user, username: updated.username }, setUser);
+      setUsernameModalOpen(false);
+      toast.success("Username updated.");
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data
+          ?.detail ?? "Could not update username.";
+      setUsernameError(detail);
+    } finally {
+      setUsernameSaving(false);
+    }
+  }
+
   const handleReset = async () => {
     if (!user) return;
     setSaving(true);
@@ -321,9 +354,19 @@ export default function AccountPage() {
               size="xl"
               className="h-28 w-28 text-4xl"
             />
-            <h2 className={`mt-5 text-2xl font-black ${usernameClassName(user.role)}`}>
-              {user.username}
-            </h2>
+            <div className="mt-5 flex items-center justify-center gap-1.5">
+              <h2 className={`text-2xl font-black ${usernameClassName(user.role)}`}>
+                {user.username}
+              </h2>
+              <button
+                type="button"
+                onClick={openUsernameModal}
+                aria-label="Change username"
+                className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-[#241d19] dark:hover:text-slate-300"
+              >
+                <PencilSquareIcon className="h-4 w-4" />
+              </button>
+            </div>
             <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
               {user.role || "GENERAL"}
             </p>
@@ -528,6 +571,82 @@ export default function AccountPage() {
       <FavouritesSection />
       <ForumActivitySection />
       <SeriesRatingsSection />
+
+      {/* ── Username change modal ─────────────────────────────────────────── */}
+      {usernameModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="username-modal-title"
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => !usernameSaving && setUsernameModalOpen(false)}
+          />
+
+          {/* Card */}
+          <div className="relative w-full max-w-sm rounded-[28px] border border-slate-200 bg-white p-7 shadow-2xl dark:border-[#342b24] dark:bg-[#1b1612]">
+            <h3
+              id="username-modal-title"
+              className="text-xl font-black text-slate-950 dark:text-white"
+            >
+              Change username
+            </h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              3–20 characters — letters, numbers, underscores, or hyphens.
+            </p>
+
+            <form onSubmit={handleUsernameSubmit} className="mt-5 space-y-4">
+              {usernameError && (
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/30 dark:text-rose-300">
+                  {usernameError}
+                </p>
+              )}
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="modal-new-username"
+                  className="block text-xs font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
+                >
+                  New username
+                </label>
+                <input
+                  id="modal-new-username"
+                  type="text"
+                  autoComplete="username"
+                  autoFocus
+                  maxLength={20}
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  placeholder=""
+                  disabled={usernameSaving}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 disabled:opacity-60 dark-theme-field dark:focus:border-blue-500 dark:focus:ring-blue-900/40"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={usernameSaving || !usernameInput.trim()}
+                  className="flex-1 rounded-2xl bg-slate-950 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
+                >
+                  {usernameSaving ? "Saving…" : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUsernameModalOpen(false)}
+                  disabled={usernameSaving}
+                  className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60 dark:border-[#342b24] dark:text-slate-300 dark:hover:bg-[#241d19]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

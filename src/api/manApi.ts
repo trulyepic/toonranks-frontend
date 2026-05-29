@@ -917,6 +917,23 @@ export const resetMyAvatar = async (): Promise<UserAvatar> => {
   return res.data;
 };
 
+export interface UsernameUpdateOut {
+  id: number;
+  username: string;
+  role: string;
+  avatar_url: string | null;
+  avatar_preset: string | null;
+}
+
+export const updateMyUsername = async (
+  newUsername: string
+): Promise<UsernameUpdateOut> => {
+  const res = await api.patch<UsernameUpdateOut>("/auth/me/username", {
+    new_username: newUsername,
+  });
+  return res.data;
+};
+
 export const mergeStoredAuthUser = (
   fields: Partial<AvatarFields>
 ): AuthUser | null => {
