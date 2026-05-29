@@ -1,8 +1,9 @@
 import { CheckIcon, PhotoIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
+  getPublicProfile,
   resetMyAvatar,
   selectMyAvatarPreset,
   uploadMyAvatar,
@@ -99,6 +100,7 @@ async function buildCroppedAvatarFile(
 
 export default function AccountPage() {
   const { user, setUser } = useUser();
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
@@ -110,9 +112,24 @@ export default function AccountPage() {
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [credStats, setCredStats] = useState<{
+    cred_score: number;
+    rank: number | null;
+    post_count: number;
+  } | null>(null);
 
   // Keep draftRef in sync so the wheel handler can read it without a stale closure
   draftRef.current = draft;
+
+  // Fetch cred_score, rank, and post_count from the public profile endpoint
+  useEffect(() => {
+    if (!user?.username) return;
+    getPublicProfile(user.username)
+      .then(({ cred_score, rank, post_count }) =>
+        setCredStats({ cred_score, rank, post_count })
+      )
+      .catch(() => {/* silently ignore — stats are non-critical */});
+  }, [user?.username]);
 
   const activePreset = normalizeAvatarPreset(user?.avatar_preset);
 
@@ -310,6 +327,26 @@ export default function AccountPage() {
             <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
               {user.role || "GENERAL"}
             </p>
+
+            {/* Cred Points + Rank */}
+            {credStats && credStats.cred_score > 0 && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  onClick={() => navigate("/leaderboard")}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-200 transition hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-400 dark:ring-amber-700/50 dark:hover:bg-amber-950/50"
+                >
+                  ◆ {credStats.cred_score.toLocaleString()} CP
+                </button>
+                {credStats.rank && (
+                  <button
+                    onClick={() => navigate("/leaderboard")}
+                    className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-200 dark:bg-[#241d19] dark:text-slate-400 dark:ring-[#342b24] dark:hover:bg-[#2a221c]"
+                  >
+                    #{credStats.rank} Ranker
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <button

@@ -22,7 +22,9 @@ import { ConfirmModal } from "../components/ConfirmModal";
 import { useNotice } from "../hooks/useNotice";
 import { NoticeModal } from "../components/NoticeModal";
 import UserAvatar from "../components/UserAvatar";
+import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
+import { getTopRankMap } from "../util/rankMap";
 
 const MAX_THREADS_PER_USER = 10;
 const MAX_SERIES_REFS = 10;
@@ -148,6 +150,7 @@ export default function ForumPage() {
   const [confirmThread, setConfirmThread] = useState<ForumThread | null>(null);
   const { user } = useUser();
   const notice = useNotice();
+  const [rankMap, setRankMap] = useState<Record<string, number>>({});
 
   const [page, setPage] = useState(1);
   const [pageSize] = useState(15); // tweak if you like
@@ -171,6 +174,11 @@ export default function ForumPage() {
     ? `Search results for "${queryLabel}" in the Toon Ranks forum.`
     : "Community forum on Toon Ranks.";
   const resultsLabel = isSearching ? `results for "${queryLabel}"` : "threads";
+
+  // Fetch top-10 rank map once for byline badges
+  useEffect(() => {
+    getTopRankMap().then(setRankMap).catch(() => {});
+  }, []);
 
   // keep URL as the source of truth for the current page
   useEffect(() => {
@@ -459,6 +467,7 @@ export default function ForumPage() {
                             {t.author_username}
                           </span>
                         </Link>
+                        <RankerBadge rank={rankMap[t.author_username]} />
                       </span>
                     ) : null}
                   </div>

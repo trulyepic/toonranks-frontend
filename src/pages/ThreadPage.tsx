@@ -34,7 +34,9 @@ import { useNotice } from "../hooks/useNotice";
 import { NoticeModal } from "../components/NoticeModal";
 import { PostVoteControl, type ForumVote } from "../components/PostVoteControl";
 import UserAvatar from "../components/UserAvatar";
+import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
+import { getTopRankMap } from "../util/rankMap";
 import {
   DEFAULT_SOCIAL_IMAGE,
   SITE_NAME,
@@ -514,9 +516,15 @@ export default function ThreadPage() {
     useState(false);
 
   const notice = useNotice();
+  const [rankMap, setRankMap] = useState<Record<string, number>>({});
 
   const loc = useLocation();
   const siteUrl = SITE_ORIGIN;
+
+  // Fetch top-10 rank map once for byline badges
+  useEffect(() => {
+    getTopRankMap().then(setRankMap).catch(() => {});
+  }, []);
 
   // Read page from URL
   useEffect(() => {
@@ -905,21 +913,24 @@ export default function ThreadPage() {
                     </span>
                     <span className="inline-flex items-center gap-1.5 font-medium">
                       {posts[0].author_username ? (
-                        <Link
-                          to={`/user/${posts[0].author_username}`}
-                          className="inline-flex items-center gap-1.5 hover:underline"
-                        >
-                          <UserAvatar
-                            username={posts[0].author_username}
-                            avatarUrl={posts[0].author_avatar_url}
-                            avatarPreset={posts[0].author_avatar_preset}
-                            size="sm"
-                            className="h-6 w-6 text-[10px]"
-                          />
-                          <span className={inlineUsernameClassName(posts[0].author_role)}>
-                            {posts[0].author_username}
-                          </span>
-                        </Link>
+                        <>
+                          <Link
+                            to={`/user/${posts[0].author_username}`}
+                            className="inline-flex items-center gap-1.5 hover:underline"
+                          >
+                            <UserAvatar
+                              username={posts[0].author_username}
+                              avatarUrl={posts[0].author_avatar_url}
+                              avatarPreset={posts[0].author_avatar_preset}
+                              size="sm"
+                              className="h-6 w-6 text-[10px]"
+                            />
+                            <span className={inlineUsernameClassName(posts[0].author_role)}>
+                              {posts[0].author_username}
+                            </span>
+                          </Link>
+                          <RankerBadge rank={rankMap[posts[0].author_username]} />
+                        </>
                       ) : (
                         <>
                           <UserAvatar
@@ -1103,6 +1114,7 @@ export default function ThreadPage() {
                           setPosts((prev) => [...prev, post])
                         }
                         notify={notice.show}
+                        rankMap={rankMap}
                       />
                     ))}
                   </div>
@@ -1211,6 +1223,7 @@ export default function ThreadPage() {
                     setPosts((prev) => [...prev, post])
                   }
                   notify={notice.show}
+                  rankMap={rankMap}
                 />
               ))}
             </>
@@ -1376,6 +1389,7 @@ function ReplyBranch({
   onCancelEdit,
   onPostCreated,
   notify,
+  rankMap,
 }: {
   post: ForumPost;
   depth: number;
@@ -1401,6 +1415,7 @@ function ReplyBranch({
     message: string | React.ReactNode;
     variant?: "info" | "success" | "warning" | "error";
   }) => void;
+  rankMap: Record<string, number>;
 }) {
   const railColors = [
     "#3b82f6",
@@ -1538,21 +1553,24 @@ function ReplyBranch({
             </span>
             <span className="inline-flex items-center gap-1.5 font-medium">
               {post.author_username ? (
-                <Link
-                  to={`/user/${post.author_username}`}
-                  className="inline-flex items-center gap-1.5 hover:underline"
-                >
-                  <UserAvatar
-                    username={post.author_username}
-                    avatarUrl={post.author_avatar_url}
-                    avatarPreset={post.author_avatar_preset}
-                    size="sm"
-                    className="h-6 w-6 text-[10px]"
-                  />
-                  <span className={inlineUsernameClassName(post.author_role)}>
-                    {post.author_username}
-                  </span>
-                </Link>
+                <>
+                  <Link
+                    to={`/user/${post.author_username}`}
+                    className="inline-flex items-center gap-1.5 hover:underline"
+                  >
+                    <UserAvatar
+                      username={post.author_username}
+                      avatarUrl={post.author_avatar_url}
+                      avatarPreset={post.author_avatar_preset}
+                      size="sm"
+                      className="h-6 w-6 text-[10px]"
+                    />
+                    <span className={inlineUsernameClassName(post.author_role)}>
+                      {post.author_username}
+                    </span>
+                  </Link>
+                  <RankerBadge rank={rankMap[post.author_username]} />
+                </>
               ) : (
                 <>
                   <UserAvatar
@@ -1748,6 +1766,7 @@ function ReplyBranch({
           onCancelEdit={onCancelEdit}
           onPostCreated={onPostCreated}
           notify={notify}
+          rankMap={rankMap}
         />
       ))}
     </div>

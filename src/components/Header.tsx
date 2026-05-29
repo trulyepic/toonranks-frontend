@@ -270,6 +270,9 @@ const Header = () => {
             <NavLink to="/forum" className={desktopNavLink}>
               Forum
             </NavLink>
+            <NavLink to="/leaderboard" className={desktopNavLink}>
+              Rankers
+            </NavLink>
           </nav>
         </div>
 
@@ -579,6 +582,7 @@ const Header = () => {
                   { to: "/type/MANGA", label: "Manga" },
                   { to: "/type/MANHUA", label: "Manhua" },
                   { to: "/forum", label: "Forum" },
+                  { to: "/leaderboard", label: "Rankers" },
                 ].map((item) => (
                   <NavLink
                     key={item.label}

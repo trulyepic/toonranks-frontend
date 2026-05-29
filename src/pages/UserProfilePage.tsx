@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { getPublicProfile, type PublicProfile } from "../api/manApi";
 import UserAvatar from "../components/UserAvatar";
@@ -24,6 +24,7 @@ function formatJoinDate(iso: string | null): string {
 
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -146,7 +147,8 @@ export default function UserProfilePage() {
               </span>
             </h1>
 
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Row 1: role badge · CP chip · rank chip */}
+            <div className="flex flex-wrap items-center gap-2.5">
               {/* Role badge */}
               <span
                 className={`inline-flex items-center rounded-full px-3.5 py-1 text-xs font-bold uppercase tracking-wider ${
@@ -160,10 +162,37 @@ export default function UserProfilePage() {
                 {roleLabel(profile.role)}
               </span>
 
-              {profile.registered_at && (
-                <span className="text-sm text-slate-400 dark:text-slate-500">
-                  Joined {formatJoinDate(profile.registered_at)}
+              {/* Cred Points */}
+              {profile.cred_score > 0 && (
+                <button
+                  onClick={() => navigate("/leaderboard")}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-200 transition hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-400 dark:ring-amber-700/50 dark:hover:bg-amber-950/50"
+                >
+                  ◆ {profile.cred_score.toLocaleString()} CP
+                </button>
+              )}
+
+              {/* Ranker position */}
+              {profile.rank && (
+                <button
+                  onClick={() => navigate("/leaderboard")}
+                  className="inline-flex items-center rounded-full bg-slate-100 px-3.5 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-200 dark:bg-[#241d19] dark:text-slate-400 dark:ring-[#342b24] dark:hover:bg-[#2a221c]"
+                >
+                  #{profile.rank} Ranker
+                </button>
+              )}
+            </div>
+
+            {/* Row 2: post count · join date (muted meta) */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400 dark:text-slate-500">
+              {profile.post_count > 0 && (
+                <span>
+                  {profile.post_count.toLocaleString()}{" "}
+                  {profile.post_count === 1 ? "post" : "posts"}
                 </span>
+              )}
+              {profile.registered_at && (
+                <span>Joined {formatJoinDate(profile.registered_at)}</span>
               )}
             </div>
           </div>
