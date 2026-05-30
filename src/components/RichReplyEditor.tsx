@@ -47,6 +47,34 @@ export default function RichReplyEditor({
 
   const notice = useNotice();
   const MAX_MENTIONS = 10;
+  const MAX_POST_LENGTH = 10_000;
+
+  // ── Draft auto-save (reply mode only) ─────────────────────────────────────
+  const draftKey = mode === "reply" ? `forum_draft_thread_${threadId}` : null;
+  const [draftSaved, setDraftSaved] = useState(false);
+
+  // Restore draft on first mount (reply mode only)
+  useEffect(() => {
+    if (!draftKey) return;
+    const saved = localStorage.getItem(draftKey);
+    if (saved) setValue(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Save draft on change (debounced 1 s)
+  useEffect(() => {
+    if (!draftKey) return;
+    const timer = setTimeout(() => {
+      if (value.trim()) {
+        localStorage.setItem(draftKey, value);
+        setDraftSaved(true);
+        setTimeout(() => setDraftSaved(false), 2000);
+      } else {
+        localStorage.removeItem(draftKey);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [value, draftKey]);
 
   const toolbarButtonClass =
     "rounded border border-slate-200 px-2 py-1 text-slate-700 hover:bg-gray-50 dark:border-[#3a3028] dark:text-slate-200 dark:hover:bg-[#241d19]";
@@ -236,6 +264,14 @@ export default function RichReplyEditor({
       });
       return;
     }
+    if (value.length > MAX_POST_LENGTH) {
+      notice.show({
+        message: `Reply is too long (${value.length.toLocaleString()} / ${MAX_POST_LENGTH.toLocaleString()} characters).`,
+        title: "Too long",
+        variant: "warning",
+      });
+      return;
+    }
     const ids = Array.from(new Set(extractIds(trimmed)));
 
     if (mode === "reply") {
@@ -264,6 +300,8 @@ export default function RichReplyEditor({
         setResults([]);
         setMenuOpen(false);
         setMentionStart(null);
+        // Clear draft on successful post
+        if (draftKey) localStorage.removeItem(draftKey);
       }
     } catch (err: unknown) {
       alert(
@@ -469,6 +507,23 @@ export default function RichReplyEditor({
         }
         className="h-28 w-full rounded border border-slate-200 bg-white px-3 py-2 text-slate-800 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100"
       />
+      <div className="flex items-center justify-between mt-1">
+        {draftSaved && (
+          <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+            Draft saved
+          </span>
+        )}
+        {!draftSaved && <span />}
+        <span
+          className={`text-xs ${
+            value.length > MAX_POST_LENGTH
+              ? "text-red-500 font-medium"
+              : "text-slate-400 dark:text-slate-500"
+          }`}
+        >
+          {value.length.toLocaleString()} / {MAX_POST_LENGTH.toLocaleString()}
+        </span>
+      </div>
 
       {menuOpen && results.length > 0 && (
         <div
@@ -539,7 +594,8 @@ export default function RichReplyEditor({
             </button>
             <button
               onClick={handlePrimary}
-              className="rounded bg-blue-600 px-3 py-1.5 text-white dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]"
+              disabled={value.length > MAX_POST_LENGTH}
+              className="rounded bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]"
             >
               Save
             </button>
@@ -547,7 +603,8 @@ export default function RichReplyEditor({
         ) : (
           <button
             onClick={handlePrimary}
-            className="rounded bg-blue-600 px-3 py-1.5 text-white dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]"
+            disabled={value.length > MAX_POST_LENGTH}
+            className="rounded bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]"
           >
             Post Reply
           </button>

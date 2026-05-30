@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   useParams,
   Link,
@@ -37,6 +37,7 @@ import UserAvatar from "../components/UserAvatar";
 import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { getTopRankMap } from "../util/rankMap";
+import { wasEdited } from "../util/dateUtils";
 import {
   DEFAULT_SOCIAL_IMAGE,
   SITE_NAME,
@@ -518,6 +519,26 @@ export default function ThreadPage() {
   const notice = useNotice();
   const [rankMap, setRankMap] = useState<Record<string, number>>({});
 
+  // ── Quote-reply state ────────────────────────────────────────────────────
+  const [quoteKey, setQuoteKey] = useState(0);
+  const [quoteInitial, setQuoteInitial] = useState("");
+  const [quoteParentId, setQuoteParentId] = useState<number | null>(null);
+  const bottomEditorRef = useRef<HTMLDivElement | null>(null);
+
+  const handleQuote = (post: ForumPost) => {
+    const quoted = post.content_markdown
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    const attribution = `> **@${post.author_username ?? "?"}** wrote:\n${quoted}\n\n`;
+    setQuoteInitial(attribution);
+    setQuoteParentId(post.id);
+    setQuoteKey((k) => k + 1);
+    setTimeout(() => {
+      bottomEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
   const loc = useLocation();
   const siteUrl = SITE_ORIGIN;
 
@@ -947,6 +968,9 @@ export default function ThreadPage() {
                       )}
                     </span>
                     <span>{new Date(posts[0].created_at).toLocaleString()}</span>
+                    {wasEdited(posts[0].created_at, posts[0].updated_at) && (
+                      <span className="text-xs italic text-slate-400 dark:text-slate-500">(edited)</span>
+                    )}
                   </div>
 
                   <div className="max-w-3xl space-y-2">
@@ -1113,6 +1137,7 @@ export default function ThreadPage() {
                         onPostCreated={(post) =>
                           setPosts((prev) => [...prev, post])
                         }
+                        onQuote={handleQuote}
                         notify={notice.show}
                         rankMap={rankMap}
                       />
@@ -1222,6 +1247,7 @@ export default function ThreadPage() {
                   onPostCreated={(post) =>
                     setPosts((prev) => [...prev, post])
                   }
+                  onQuote={handleQuote}
                   notify={notice.show}
                   rankMap={rankMap}
                 />
@@ -1238,7 +1264,7 @@ export default function ThreadPage() {
         </div>
       )}
 
-      <div className="mt-6 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.07)] dark:border-[#322922] dark:bg-[#1b1613] dark:shadow-[0_18px_40px_rgba(0,0,0,0.55)]">
+      <div ref={bottomEditorRef} className="mt-6 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.07)] dark:border-[#322922] dark:bg-[#1b1613] dark:shadow-[0_18px_40px_rgba(0,0,0,0.55)]">
         <div className="border-b border-slate-200/70 bg-[linear-gradient(135deg,rgba(248,250,252,0.94),rgba(255,255,255,0.98)_62%,rgba(239,246,255,0.8))] px-5 py-4 dark:border-[#322922] dark:bg-[linear-gradient(135deg,rgba(34,27,23,0.98),rgba(24,19,16,0.98)_62%,rgba(29,22,18,0.9))] sm:px-6">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
@@ -1255,8 +1281,10 @@ export default function ThreadPage() {
         <div className="px-5 py-5 sm:px-6 sm:py-6">
           {!thread?.locked || isAdmin ? (
             <RichReplyEditor
+              key={quoteKey}
               compact={false}
               threadId={threadId}
+              initial={quoteInitial}
               onSubmit={async (content, seriesIds) => {
                 if (!user) {
                   notice.show({
@@ -1264,7 +1292,6 @@ export default function ThreadPage() {
                     title: "Sign in required",
                     variant: "warning",
                   });
-
                   return;
                 }
                 const trimmed = content.trim();
@@ -1274,15 +1301,17 @@ export default function ThreadPage() {
                     title: "Cannot post",
                     variant: "warning",
                   });
-
                   return;
                 }
                 try {
                   const p = await createForumPost(threadId, {
                     content_markdown: trimmed,
                     series_ids: seriesIds,
+                    parent_id: quoteParentId ?? undefined,
                   });
                   setPosts((prev) => [...prev, p]);
+                  setQuoteInitial("");
+                  setQuoteParentId(null);
                 } catch (err: unknown) {
                   notice.show({
                     message: getErrorMessage(err) || "Failed to post reply.",
@@ -1388,6 +1417,7 @@ function ReplyBranch({
   onSaveEdit,
   onCancelEdit,
   onPostCreated,
+  onQuote,
   notify,
   rankMap,
 }: {
@@ -1410,6 +1440,7 @@ function ReplyBranch({
   onSaveEdit: (content: string, seriesIds: number[]) => Promise<void> | void;
   onCancelEdit: () => void;
   onPostCreated: (post: ForumPost) => void;
+  onQuote?: (post: ForumPost) => void;
   notify: (opts: {
     title?: string;
     message: string | React.ReactNode;
@@ -1587,9 +1618,21 @@ function ReplyBranch({
               )}
             </span>
             <span>{new Date(post.created_at).toLocaleString()}</span>
+            {wasEdited(post.created_at, post.updated_at) && (
+              <span className="text-xs italic text-slate-400 dark:text-slate-500">(edited)</span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 self-start">
+            {!locked && onQuote && (
+              <button
+                onClick={() => onQuote(post)}
+                className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:text-slate-400 dark:hover:bg-[#241d19]"
+                title="Quote this post in your reply"
+              >
+                Quote
+              </button>
+            )}
             {canModify && !isEditingThis && (
               <div className="flex items-center gap-2">
                 <button
@@ -1765,6 +1808,7 @@ function ReplyBranch({
           onSaveEdit={onSaveEdit}
           onCancelEdit={onCancelEdit}
           onPostCreated={onPostCreated}
+          onQuote={onQuote}
           notify={notify}
           rankMap={rankMap}
         />
