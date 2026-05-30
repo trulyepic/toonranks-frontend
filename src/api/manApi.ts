@@ -1424,6 +1424,18 @@ export async function setThreadPin(
   return res.data;
 }
 
+export async function reportPost(
+  thread_id: number,
+  post_id: number,
+  reason?: string
+): Promise<{ message: string }> {
+  const res = await api.post<{ message: string }>(
+    `/forum/threads/${thread_id}/posts/${post_id}/report`,
+    { reason }
+  );
+  return res.data;
+}
+
 export async function updateForumThreadSettings(
   thread_id: number,
   input: { latest_first?: boolean }

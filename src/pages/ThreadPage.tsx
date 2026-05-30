@@ -18,6 +18,7 @@ import {
   editForumPost,
   setForumPostVote,
   getForumThreadPaged,
+  reportPost,
 } from "../api/manApi";
 import { useUser } from "../login/useUser";
 import ReactMarkdown from "react-markdown";
@@ -1460,6 +1461,10 @@ function ReplyBranch({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
   const [replyComposerOpen, setReplyComposerOpen] = useState(false);
+  const [reportFormOpen, setReportFormOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reported, setReported] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
 
   function lightenHex(hex: string, amount = 0.35) {
     const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -1711,6 +1716,71 @@ function ReplyBranch({
               }
             }}
           />
+
+          {/* Report button — visible to authenticated non-authors on unlocked threads */}
+          {currentUsername && currentUsername !== post.author_username && !reported && (
+            <button
+              type="button"
+              onClick={() => setReportFormOpen((o) => !o)}
+              className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#3a3028] dark:text-slate-400 dark:hover:border-rose-800/60 dark:hover:bg-rose-950/20 dark:hover:text-rose-400"
+              title="Report this post"
+            >
+              ⚑ Report
+            </button>
+          )}
+
+          {reportFormOpen && !reported && (
+            <div
+              className="w-full mt-2 rounded-2xl border border-rose-200 bg-rose-50/60 px-3 py-3 dark:border-rose-800/40 dark:bg-rose-950/20"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="mb-2 text-xs font-semibold text-rose-700 dark:text-rose-300">
+                Report this post
+              </p>
+              <textarea
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                maxLength={500}
+                placeholder="Reason (optional)"
+                rows={2}
+                className="w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 dark:border-rose-800/40 dark:bg-[#18120f] dark:text-slate-100"
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={reportBusy}
+                  onClick={async () => {
+                    setReportBusy(true);
+                    try {
+                      await reportPost(threadId, post.id, reportReason.trim() || undefined);
+                      setReported(true);
+                      setReportFormOpen(false);
+                      notify({ message: "Report submitted. Our team will review it.", variant: "success" });
+                    } catch (err: unknown) {
+                      const status = (err as { response?: { status?: number } })?.response?.status;
+                      if (status === 409) {
+                        notify({ message: "You have already reported this post.", variant: "warning" });
+                      } else {
+                        notify({ message: "Failed to submit report.", variant: "error" });
+                      }
+                    } finally {
+                      setReportBusy(false);
+                    }
+                  }}
+                  className="rounded-full bg-rose-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50 hover:bg-rose-700"
+                >
+                  {reportBusy ? "Submitting..." : "Submit report"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setReportFormOpen(false); setReportReason(""); }}
+                  className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-[#3a3028] dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {!isUpdatesMode ? (
             !locked || isAdmin ? (
