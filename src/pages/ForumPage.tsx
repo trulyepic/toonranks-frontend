@@ -160,6 +160,12 @@ export default function ForumPage() {
   const [hasNext, setHasNext] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
+  type SortOption = "activity" | "newest" | "replies";
+  const SORT_KEY = "forum_sort";
+  const [sortBy, setSortBy] = useState<SortOption>(
+    () => (sessionStorage.getItem(SORT_KEY) as SortOption | null) ?? "activity"
+  );
+
   const myName = user?.username || "";
   const isAdmin = (user?.role || "").toUpperCase() === "ADMIN";
 
@@ -199,7 +205,7 @@ export default function ForumPage() {
   // };
 
   const load = async () => {
-    const r = await listForumThreadsPaged(q, page, pageSize);
+    const r = await listForumThreadsPaged(q, page, pageSize, { sort: sortBy });
     // Only promote pinned/patch notes on page 1 to avoid duplicates
     const items =
       page === 1 ? promotePatchNotes(r.items.slice()) : r.items.slice();
@@ -233,7 +239,7 @@ export default function ForumPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, page, user?.id]);
+  }, [q, page, sortBy, user?.id]);
 
   const onClickNewThread = () => {
     if (!user) {
@@ -324,7 +330,7 @@ export default function ForumPage() {
           )}
           {/* summary badge */}
           {user && myThreadCount > 0 && (
-            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/30 dark:text-emerald-200">
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/30 dark:text-emerald-200">
               Your threads <strong>{myThreadCount}</strong>
             </span>
           )}
@@ -344,12 +350,40 @@ export default function ForumPage() {
 
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => { setQ(e.target.value); setSearchParams({ page: "1" }); }}
           placeholder="Search threads..."
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]"
         />
       </div>
 
+      {/* Sort controls */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Sort:</span>
+        {(
+          [
+            { value: "activity", label: "Active" },
+            { value: "newest",   label: "Newest" },
+            { value: "replies",  label: "Most replies" },
+          ] as { value: SortOption; label: string }[]
+        ).map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => {
+              if (sortBy === value) return;
+              sessionStorage.setItem(SORT_KEY, value);
+              setSortBy(value);
+              setSearchParams({ page: "1" });
+            }}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              sortBy === value
+                ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
+                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-300 dark:hover:bg-[#241d19]"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <ul className="space-y-3">
         {threads.map((t) => {
