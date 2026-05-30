@@ -463,6 +463,8 @@ export type ForumThread = {
   series_refs: ForumSeriesRef[];
   locked?: boolean;
   latest_first?: boolean;
+  is_pinned?: boolean;
+  view_count?: number;
 };
 export type ForumPost = {
   id: number;
@@ -1407,6 +1409,17 @@ export async function lockForumThread(
   const res = await api.patch<{ id: number; locked: boolean }>(
     `/forum/threads/${thread_id}/lock`,
     { locked }
+  );
+  return res.data;
+}
+
+export async function setThreadPin(
+  thread_id: number,
+  pinned: boolean
+): Promise<{ id: number; is_pinned: boolean }> {
+  const res = await api.patch<{ id: number; is_pinned: boolean }>(
+    `/forum/threads/${thread_id}/pin`,
+    { pinned }
   );
   return res.data;
 }

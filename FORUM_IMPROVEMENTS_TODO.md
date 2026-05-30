@@ -120,46 +120,16 @@ Suggested branch: `frontend-forum-rich-text` — **complete, pending merge**
 
 ---
 
-## Phase 4: Thread Pinning UI
+## ✅ Phase 4: Thread Pinning UI
 
-Suggested branch: `frontend-forum-pinning`
+Suggested branch: `frontend-forum-pinning` — **complete, pending merge**
 
-**Backend dependency:** Requires backend Phase 1c (`is_pinned` column and `PATCH /forum/threads/{id}/pin`
-endpoint) to be deployed first.
-
-**Files:** `src/pages/ForumPage.tsx`, `src/api/manApi.ts`
-
-### 4a — API function
-
-Add to `src/api/manApi.ts`:
-```typescript
-export interface PinToggleOut {
-  id: number;
-  is_pinned: boolean;
-}
-
-export const setThreadPin = async (
-  threadId: number,
-  pinned: boolean
-): Promise<PinToggleOut> => {
-  const res = await api.patch<PinToggleOut>(`/forum/threads/${threadId}/pin`, { pinned });
-  return res.data;
-};
-```
-
-### 4b — Thread list changes
-
-- [ ] Update `ForumThreadOut` type in `manApi.ts` to include `is_pinned: boolean` and
-  `view_count: number` (from backend Phase 1b).
-- [ ] In `ForumPage.tsx`, remove the client-side patch notes pin hack (the check that pins a thread
-  whose title contains a specific string). The backend now returns `is_pinned` correctly.
-- [ ] In the thread list render, show a distinct visual treatment for pinned threads:
-  - A 📌 pin icon at the start of the thread row
-  - A subtle background or border color difference (e.g. a faint amber left border)
-  - The text "Pinned" as a small badge
-- [ ] Admin controls: when the signed-in user is an ADMIN, show a pin/unpin button in the thread row
-  actions (alongside the existing lock/delete admin controls). Tapping it calls `setThreadPin`.
-  Optimistically toggle `is_pinned` in the thread list state and revert on error.
+- [x] `is_pinned?: boolean` and `view_count?: number` added to `ForumThread` type in `manApi.ts`
+- [x] `setThreadPin(thread_id, pinned)` API function added
+- [x] Client-side `promotePatchNotes` hack removed — `PATCH_NOTES_TITLE`, `normalize`, and `promotePatchNotes` all deleted
+- [x] Pinned threads get amber left border + warm amber background in thread list
+- [x] 📌 icon prefixed to pinned thread titles; "Pinned" amber badge in meta row
+- [x] Admin pin/unpin button in thread row actions — optimistic update, reverts on error
 
 ---
 

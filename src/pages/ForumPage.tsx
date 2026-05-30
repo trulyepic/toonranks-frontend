@@ -8,6 +8,7 @@ import {
   getForumThread,
   updateForumThread,
   listForumThreadsPaged,
+  setThreadPin,
 } from "../api/manApi";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "../login/useUser";
@@ -29,19 +30,6 @@ import MarkdownToolbar from "../components/MarkdownToolbar";
 
 const MAX_THREADS_PER_USER = 10;
 const MAX_SERIES_REFS = 10;
-const PATCH_NOTES_TITLE = "Patch Notes & Site Updates";
-const normalize = (s: string) => (s || "").trim().toLowerCase();
-
-function promotePatchNotes(list: ForumThread[]) {
-  const i = list.findIndex(
-    (t) => normalize(t.title) === normalize(PATCH_NOTES_TITLE)
-  );
-  if (i > 0) {
-    const [pinned] = list.splice(i, 1);
-    list.unshift(pinned);
-  }
-  return list;
-}
 
 function SeriesRefPill({ s }: { s: ForumThread["series_refs"][number] }) {
   return (
@@ -207,9 +195,7 @@ export default function ForumPage() {
 
   const load = async () => {
     const r = await listForumThreadsPaged(q, page, pageSize, { sort: sortBy });
-    // Only promote pinned/patch notes on page 1 to avoid duplicates
-    const items =
-      page === 1 ? promotePatchNotes(r.items.slice()) : r.items.slice();
+    const items = r.items.slice();
 
     setThreads(items);
     setTotal(r.total);
@@ -390,8 +376,7 @@ export default function ForumPage() {
         {threads.map((t) => {
           const isOwner = t.author_username === myName;
           const canDelete = isAdmin || isOwner;
-          const isPatchNotes =
-            normalize(t.title) === normalize(PATCH_NOTES_TITLE);
+          const isPinned = !!t.is_pinned;
 
           return (
             <li
@@ -413,7 +398,11 @@ export default function ForumPage() {
                   navigate(`/forum/${t.id}`);
                 }
               }}
-              className="cursor-pointer rounded-[1.75rem] border border-white/70 bg-white/40 p-4 shadow-sm ring-1 ring-black/5 backdrop-blur-md transition hover:bg-white/60 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-200 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(29,24,20,0.98),rgba(21,17,14,0.98))] dark:ring-[rgba(255,255,255,0.03)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.4)] dark:hover:bg-[linear-gradient(145deg,rgba(35,28,23,0.98),rgba(24,20,16,0.98))] dark:focus:ring-blue-950/50"
+              className={`cursor-pointer rounded-[1.75rem] border p-4 shadow-sm ring-1 ring-black/5 backdrop-blur-md transition hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-200 dark:ring-[rgba(255,255,255,0.03)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.4)] dark:focus:ring-blue-950/50 ${
+                isPinned
+                  ? "border-l-4 border-amber-300 bg-amber-50/60 hover:bg-amber-50/80 dark:border-amber-700/70 dark:bg-[linear-gradient(145deg,rgba(40,30,10,0.98),rgba(28,21,8,0.98))] dark:hover:bg-[linear-gradient(145deg,rgba(48,36,12,0.98),rgba(34,25,10,0.98))]"
+                  : "border-white/70 bg-white/40 hover:bg-white/60 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(29,24,20,0.98),rgba(21,17,14,0.98))] dark:hover:bg-[linear-gradient(145deg,rgba(35,28,23,0.98),rgba(24,20,16,0.98))]"
+              }`}
             >
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -421,36 +410,82 @@ export default function ForumPage() {
                     to={`/forum/${t.id}`}
                     className="text-base font-semibold leading-6 text-slate-900 hover:underline dark:text-stone-50 sm:text-lg"
                   >
+                    {isPinned && <span className="mr-1">📌</span>}
                     {stripMdHeading(t.title)}
                   </Link>
 
-                  {canDelete && (
+                  {(canDelete || isAdmin) && (
                     <div className="flex items-center gap-2 self-start sm:self-auto">
-                      <button
-                        type="button"
-                        title="Edit thread"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setEditingThread(t);
-                          setEditingBody("");
-                          (async () => {
-                            try {
-                              const data = await getForumThread(t.id);
-                              setEditingBody(
-                                data.posts?.[0]?.content_markdown ?? ""
-                              );
-                            } catch {
-                              // silent; keep empty body if fetch fails
-                            }
-                          })();
-                        }}
-                        className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-[#3a3028] dark:text-stone-200 dark:hover:bg-[linear-gradient(145deg,_rgba(34,47,83,0.8),_rgba(24,31,55,0.8))] dark:hover:text-blue-200"
-                      >
-                        Edit
-                      </button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          title="Edit thread"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditingThread(t);
+                            setEditingBody("");
+                            (async () => {
+                              try {
+                                const data = await getForumThread(t.id);
+                                setEditingBody(
+                                  data.posts?.[0]?.content_markdown ?? ""
+                                );
+                              } catch {
+                                // silent; keep empty body if fetch fails
+                              }
+                            })();
+                          }}
+                          className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-[#3a3028] dark:text-stone-200 dark:hover:bg-[linear-gradient(145deg,_rgba(34,47,83,0.8),_rgba(24,31,55,0.8))] dark:hover:text-blue-200"
+                        >
+                          Edit
+                        </button>
+                      )}
 
-                      {!t.locked && (
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          title={isPinned ? "Unpin thread" : "Pin thread"}
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Optimistic update
+                            setThreads((prev) =>
+                              prev.map((th) =>
+                                th.id === t.id
+                                  ? { ...th, is_pinned: !isPinned }
+                                  : th
+                              )
+                            );
+                            try {
+                              await setThreadPin(t.id, !isPinned);
+                            } catch {
+                              // Revert on error
+                              setThreads((prev) =>
+                                prev.map((th) =>
+                                  th.id === t.id
+                                    ? { ...th, is_pinned: isPinned }
+                                    : th
+                                )
+                              );
+                              notice.show({
+                                title: "Action failed",
+                                message: "Could not update pin status.",
+                                variant: "error",
+                              });
+                            }
+                          }}
+                          className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                            isPinned
+                              ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-300"
+                              : "border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-[#3a3028] dark:text-stone-200 dark:hover:border-amber-700/60 dark:hover:bg-amber-950/30 dark:hover:text-amber-300"
+                          }`}
+                        >
+                          {isPinned ? "📌 Pinned" : "Pin"}
+                        </button>
+                      )}
+
+                      {canDelete && !t.locked && (
                         <button
                           type="button"
                           title="Delete thread"
@@ -507,8 +542,8 @@ export default function ForumPage() {
                     ) : null}
                   </div>
 
-                  {isPatchNotes && (
-                    <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-700 dark:bg-violet-950/35 dark:text-violet-200">
+                  {isPinned && (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:bg-amber-950/35 dark:text-amber-200">
                       Pinned
                     </span>
                   )}
