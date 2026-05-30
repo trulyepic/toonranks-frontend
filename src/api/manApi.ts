@@ -1219,7 +1219,11 @@ export async function listForumThreadsPaged(
   q = "",
   page = 1,
   page_size = 20,
-  opts?: { author_id?: number; signal?: AbortSignal }
+  opts?: {
+    author_id?: number;
+    signal?: AbortSignal;
+    sort?: "activity" | "newest" | "replies";
+  }
 ): Promise<Paginated<ForumThread>> {
   const res = await api.get<Paginated<ForumThread>>("/forum/threads-paged", {
     params: {
@@ -1227,6 +1231,7 @@ export async function listForumThreadsPaged(
       page,
       page_size,
       ...(opts?.author_id != null ? { author_id: opts.author_id } : {}),
+      ...(opts?.sort ? { sort: opts.sort } : {}),
     },
     signal: opts?.signal,
   });

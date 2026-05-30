@@ -88,25 +88,22 @@ later than `created_at` (allow a 10-second buffer to account for flush timing).
 
 ---
 
-## Phase 2: Thread Sorting UI
+## ✅ Phase 2: Thread Sorting UI
 
-Suggested branch: `frontend-forum-sorting`
+Suggested branch: `frontend-forum-sorting` — **complete, pending merge**
 
-**Backend dependency:** Requires backend Phase 2 (`backend-forum-thread-sorting`) to be deployed
-first so the `?sort=` query param is accepted.
+**Backend dependency:** Backend Phase 2 already deployed.
 
-**File:** `src/pages/ForumPage.tsx`
+**File:** `src/pages/ForumPage.tsx`, `src/api/manApi.ts`
 
-- [ ] Add sort state: `const [sortBy, setSortBy] = useState<"activity" | "newest" | "replies">("activity")`
-- [ ] Pass `sort: sortBy` in the params object to `fetchThreadsPaged(...)`.
-- [ ] Add a sort control above the thread list, to the right of the search input. Three buttons or
-  a `<select>` dropdown:
-  - "Active" (maps to `"activity"`, default)
-  - "Newest" (maps to `"newest"`)
-  - "Most Replies" (maps to `"replies"`)
-- [ ] When sort changes, reset to page 1 and re-fetch.
-- [ ] Persist the sort choice in `sessionStorage` so it survives page navigation within the session
-  but resets on a fresh visit.
+- [x] `sort` option added to `listForumThreadsPaged` opts parameter in `manApi.ts`
+- [x] `sortBy` state initialized from `sessionStorage` (defaults to `"activity"`)
+- [x] `sort: sortBy` passed to `listForumThreadsPaged` on every load
+- [x] Sort control row (3 pill buttons: Active / Newest / Most replies) inserted below search input
+- [x] Active sort pill styled with emerald highlight matching existing design system
+- [x] On sort change: persists to `sessionStorage`, resets page to 1, re-fetches
+- [x] On search query change: also resets to page 1
+- [x] `sortBy` included in `useEffect` dependency array
 
 ---
 
