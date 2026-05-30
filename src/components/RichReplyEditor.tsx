@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import MarkdownToolbar from "./MarkdownToolbar";
 import type { ForumSeriesRef, ReadingList } from "../api/manApi";
 import {
   forumSeriesSearch,
@@ -360,23 +361,15 @@ export default function RichReplyEditor({
           : "bg-white dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.98),_rgba(21,17,14,0.98))]"
       }`}
     >
+      <div className="relative mb-2">
+        <MarkdownToolbar
+          textareaRef={taRef}
+          value={value}
+          onChange={setValue}
+        />
+      </div>
+
       <div className="relative mb-2 flex items-center gap-2 text-sm">
-        <button
-          type="button"
-          className={toolbarButtonClass}
-          onClick={() => wrapSelection("**")}
-          title="Bold (**text**)"
-        >
-          B
-        </button>
-        <button
-          type="button"
-          className={`${toolbarButtonClass} italic`}
-          onClick={() => wrapSelection("*")}
-          title="Italic (*text*)"
-        >
-          I
-        </button>
         <button
           type="button"
           className={toolbarButtonClass}

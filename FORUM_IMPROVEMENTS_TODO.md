@@ -107,50 +107,16 @@ Suggested branch: `frontend-forum-sorting` — **complete, pending merge**
 
 ---
 
-## Phase 3: Rich Text Markdown Toolbar
+## ✅ Phase 3: Rich Text Markdown Toolbar
 
-Suggested branch: `frontend-forum-rich-text`
+Suggested branch: `frontend-forum-rich-text` — **complete, pending merge**
 
-**File:** `src/pages/ThreadPage.tsx` — `RichReplyEditor` component (and thread creation modal in
-`ForumPage.tsx`)
-
-The current composer is a raw `<textarea>` with no formatting assistance. Non-technical users will
-not write markdown. A toolbar with common formatting buttons dramatically lowers the barrier.
-
-- [ ] Create a shared `MarkdownToolbar` component at `src/components/MarkdownToolbar.tsx`:
-  ```tsx
-  interface MarkdownToolbarProps {
-    textareaRef: React.RefObject<HTMLTextAreaElement>;
-    onChange: (newValue: string) => void;
-  }
-  ```
-  The toolbar wraps text selection with the appropriate markdown syntax by reading
-  `textareaRef.current?.selectionStart` and `selectionEnd`, replacing the selection.
-
-- [ ] Implement the following toolbar buttons. Each button calls a `wrapSelection(prefix, suffix)`
-  helper that:
-  1. Gets the current selection range from `selectionStart` / `selectionEnd`.
-  2. Wraps the selected text (or inserts placeholder text if nothing is selected).
-  3. Calls `onChange` with the new string.
-  4. Restores focus and cursor position to the textarea.
-
-  | Button | Icon | Markdown inserted |
-  |---|---|---|
-  | Bold | **B** | `**selected text**` |
-  | Italic | *I* | `*selected text*` |
-  | Strikethrough | ~~S~~ | `~~selected text~~` |
-  | Link | 🔗 | `[selected text](url)` — prompt for URL |
-  | Inline code | `</>` | `` `selected text` `` |
-  | Code block | 📋 | ` ```\nselected text\n``` ` |
-  | Blockquote | " | `> selected text` |
-  | Unordered list | • | `- selected text` |
-  | Ordered list | 1. | `1. selected text` |
-  | Spoiler | 👁 | `<details><summary>Spoiler</summary>\nselected text\n</details>` |
-
-- [ ] Place `<MarkdownToolbar>` above the `<textarea>` in both the reply composer in `ThreadPage.tsx`
-  and the first-post textarea in the thread creation modal in `ForumPage.tsx`.
-- [ ] The toolbar should be scrollable horizontally on narrow screens so it does not wrap onto
-  multiple lines.
+- [x] Created `src/components/MarkdownToolbar.tsx` — self-contained, works with any textarea via ref
+- [x] Buttons: Bold, Italic, Strikethrough, Link (prompts for URL), Inline code, Code block, Blockquote, Unordered list, Ordered list, Spoiler (`<details>`)
+- [x] `wrapSelection`, `prefixLines`, `insert` helpers restore focus and cursor/selection after each action
+- [x] Horizontally scrollable on narrow screens (`overflow-x-auto` + `flex` with `shrink-0` buttons)
+- [x] Replaces existing B/I buttons in `RichReplyEditor.tsx`; Image/GIF + List buttons remain after it
+- [x] Added above first-post textarea in `NewThreadModal` in `ForumPage.tsx`
 
 ---
 

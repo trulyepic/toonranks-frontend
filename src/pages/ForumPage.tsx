@@ -25,6 +25,7 @@ import UserAvatar from "../components/UserAvatar";
 import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { getTopRankMap } from "../util/rankMap";
+import MarkdownToolbar from "../components/MarkdownToolbar";
 
 const MAX_THREADS_PER_USER = 10;
 const MAX_SERIES_REFS = 10;
@@ -1122,6 +1123,13 @@ function NewThreadModal({
         />
 
         {/* body with @-mention support */}
+        <div className="mb-1">
+          <MarkdownToolbar
+            textareaRef={mdRef}
+            value={md}
+            onChange={setMd}
+          />
+        </div>
         <div className="relative">
           <textarea
             ref={mdRef}
