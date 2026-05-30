@@ -133,43 +133,16 @@ Suggested branch: `frontend-forum-pinning` — **complete, pending merge**
 
 ---
 
-## Phase 5: Post Reporting UI
+## ✅ Phase 5: Post Reporting UI
 
-Suggested branch: `frontend-forum-post-reporting`
+Suggested branch: `frontend-forum-post-reporting` — **complete, pending merge**
 
-**Backend dependency:** Requires backend Phase 3 (`POST /forum/threads/{id}/posts/{postId}/report`)
-to be deployed first.
-
-**File:** `src/pages/ThreadPage.tsx`, `src/api/manApi.ts`
-
-### 5a — API function
-
-Add to `src/api/manApi.ts`:
-```typescript
-export const reportPost = async (
-  threadId: number,
-  postId: number,
-  reason?: string
-): Promise<{ message: string }> => {
-  const res = await api.post(`/forum/threads/${threadId}/posts/${postId}/report`, { reason });
-  return res.data;
-};
-```
-
-### 5b — Report button on posts
-
-- [ ] Add a "⚑ Report" button to the post action row in `ThreadPage.tsx`.
-  Show it only to authenticated users and only on posts where the signed-in user is not the author
-  (block self-reporting client-side to match backend behavior).
-- [ ] Clicking "Report" opens a small inline form or modal with:
-  - A header: "Report this post"
-  - An optional textarea: "Reason (optional)" — max 500 characters
-  - A "Submit Report" button
-  - A cancel action
-- [ ] On submit, call `reportPost`. On 201 success, show `toast.success("Report submitted. Our team will review it.")` and close the form.
-- [ ] On 409 (already reported), show `toast.error("You have already reported this post.")`.
-- [ ] Disable the Report button after a successful submission so the user cannot double-report within
-  the same page session (persist via local component state `const [reported, setReported] = useState(false)`).
+- [x] `reportPost(thread_id, post_id, reason?)` added to `manApi.ts`
+- [x] ⚑ Report button on each reply — shown only to authenticated users who are not the post author
+- [x] Clicking opens an inline rose-tinted form: optional reason textarea (max 500 chars) + Submit + Cancel
+- [x] On success: notifies "Report submitted. Our team will review it." and hides form + button
+- [x] On 409: notifies "You have already reported this post."
+- [x] `reported` state prevents double-reporting within the same session
 
 ---
 
