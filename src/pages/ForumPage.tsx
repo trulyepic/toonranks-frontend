@@ -709,8 +709,37 @@ function NewThreadModal({
   const { user } = useUser();
   const notice = useNotice();
 
-  const [title, setTitle] = useState(initialTitle);
-  const [md, setMd] = useState(initialMd);
+  const THREAD_DRAFT_KEY = "forum_draft_new_thread";
+
+  const [title, setTitle] = useState(() => {
+    if (mode === "create") {
+      return localStorage.getItem(THREAD_DRAFT_KEY)
+        ? (JSON.parse(localStorage.getItem(THREAD_DRAFT_KEY)!) as { title?: string }).title ?? initialTitle
+        : initialTitle;
+    }
+    return initialTitle;
+  });
+  const [md, setMd] = useState(() => {
+    if (mode === "create") {
+      return localStorage.getItem(THREAD_DRAFT_KEY)
+        ? (JSON.parse(localStorage.getItem(THREAD_DRAFT_KEY)!) as { md?: string }).md ?? initialMd
+        : initialMd;
+    }
+    return initialMd;
+  });
+
+  // Save draft (debounced 1 s) — create mode only
+  useEffect(() => {
+    if (mode !== "create") return;
+    const timer = setTimeout(() => {
+      if (title.trim() || md.trim()) {
+        localStorage.setItem(THREAD_DRAFT_KEY, JSON.stringify({ title, md }));
+      } else {
+        localStorage.removeItem(THREAD_DRAFT_KEY);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [title, md, mode]);
 
   // existing series picker state
   const [query, setQuery] = useState("");
@@ -946,6 +975,7 @@ function NewThreadModal({
         first_post_markdown: md,
         series_ids,
       });
+      localStorage.removeItem(THREAD_DRAFT_KEY);
       onCreated?.(t);
     } catch (e: unknown) {
       let msg = "Failed to create thread.";

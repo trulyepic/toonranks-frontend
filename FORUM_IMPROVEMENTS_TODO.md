@@ -44,9 +44,11 @@ of popular modern forums (Reddit, Discourse, phpBB). The backend companion doc i
 
 ---
 
-## Phase 1: Quick Wins — Frontend-Only Changes (No Backend Work Required)
+## ✅ Phase 1: Quick Wins — Frontend-Only Changes (No Backend Work Required)
 
-Suggested branch: `frontend-forum-quick-wins`
+Suggested branch: `frontend-forum-quick-wins` — **complete, pending merge**
+
+No migration required.
 
 These changes require no backend work. All the data needed already exists in API responses.
 
@@ -58,111 +60,31 @@ Every `ForumPostOut` already includes `created_at` and `updated_at`. The post co
 displays `updated_at`. An "(edited)" label should appear whenever `updated_at` is meaningfully
 later than `created_at` (allow a 10-second buffer to account for flush timing).
 
-- [ ] Create a utility function (inline or in a shared `src/utils/dateUtils.ts`):
-  ```typescript
-  export function wasEdited(createdAt: string, updatedAt: string): boolean {
-    const diff = new Date(updatedAt).getTime() - new Date(createdAt).getTime();
-    return diff > 10_000; // more than 10 seconds later
-  }
-  ```
-- [ ] In the post/reply render section of `ThreadPage.tsx`, add the edited label next to the
-  post timestamp:
-  ```tsx
-  {wasEdited(post.created_at, post.updated_at) && (
-    <span className="text-xs text-muted-foreground italic ml-2">(edited)</span>
-  )}
-  ```
-  Place it immediately after the `created_at` timestamp display in the post byline row.
-- [ ] Apply the same check to the original post (the first post / OP) at the top of the thread.
+- [x] Created `src/util/dateUtils.ts` with `wasEdited(createdAt, updatedAt): boolean` (10-second buffer)
+- [x] `(edited)` label added after timestamp in `ReplyBranch` byline
+- [x] `(edited)` label added after timestamp in the OP (posts[0]) byline
 
 ### 1b — Character limit counter in the web reply composer
 
-**File:** `src/pages/ThreadPage.tsx` — `RichReplyEditor` component (or wherever the reply
-`<textarea>` lives)
-
-The web composer has no visible character count. The backend `CreatePostIn` schema enforces a
-content length limit (check `app/schemas/forum_schemas.py` for the exact `max_length` — it is
-likely 10,000 characters based on the `Text` column type; confirm and match it). The mobile app
-already shows a counter.
-
-- [ ] Identify the maximum allowed content length from `app/schemas/forum_schemas.py`
-  `content_markdown` field validator and store it as a constant:
-  ```typescript
-  const MAX_POST_LENGTH = 10_000; // match backend validator exactly
-  ```
-- [ ] Add a live character counter below the reply `<textarea>`:
-  ```tsx
-  <div className="flex justify-end text-xs text-muted-foreground mt-1">
-    <span className={content.length > MAX_POST_LENGTH ? "text-red-500" : ""}>
-      {content.length} / {MAX_POST_LENGTH}
-    </span>
-  </div>
-  ```
-  Color turns red when the limit is reached or exceeded. Disable the submit button when
-  `content.length > MAX_POST_LENGTH`.
-- [ ] Apply the same counter to the thread creation modal's "First post" textarea.
+- [x] `MAX_POST_LENGTH = 10_000` constant added to `RichReplyEditor.tsx`
+- [x] Live character counter displayed below textarea; turns red when limit exceeded
+- [x] Submit button disabled when `value.length > MAX_POST_LENGTH`
+- [x] Over-limit guard in `handlePrimary` with a notice modal error
 
 ### 1c — Quote-reply button
 
-**File:** `src/pages/ThreadPage.tsx`
-
-A one-click "Quote" button on each post that pre-fills the reply composer with a markdown
-blockquote of the post content. This does not require any backend change.
-
-- [ ] Add a "Quote" button to the post action row (alongside the existing upvote/downvote controls).
-  Show it only on posts in unlocked threads.
-- [ ] On click, insert a quoted block into the reply composer:
-  ```typescript
-  function handleQuoteReply(post: ForumPost) {
-    const quoted = post.content_markdown
-      .split("\n")
-      .map((line) => `> ${line}`)
-      .join("\n");
-    const attribution = `> **@${post.author_username}** wrote:\n${quoted}\n\n`;
-    setReplyContent((prev) => prev ? `${attribution}\n${prev}` : attribution);
-    // scroll to and focus the reply composer
-    replyEditorRef.current?.focus();
-  }
-  ```
-- [ ] If the thread is viewing a nested reply, set `replyParentId` to that post's id so the quoted
-  reply is threaded under the correct parent.
-- [ ] Add a ref (`replyEditorRef`) to the reply `<textarea>` so the quote action can auto-focus it.
+- [x] "Quote" button added to `ReplyBranch` action row; shown only on unlocked threads
+- [x] `handleQuote` in `ThreadPage` builds blockquote markdown with `> **@author** wrote:` attribution
+- [x] Bottom editor remounts with quoted content via `key={quoteKey}` + `initial={quoteInitial}`
+- [x] `quoteParentId` wired into `createForumPost` so quoted replies thread under the quoted post
+- [x] Bottom editor section scrolled into view on quote (`bottomEditorRef`)
+- [x] `onQuote` prop propagated down the full `ReplyBranch` tree
 
 ### 1d — Draft auto-save
 
-**File:** `src/pages/ThreadPage.tsx` (reply composer), `src/pages/ForumPage.tsx` (thread creation modal)
-
-When a user types a long reply and accidentally navigates away, the draft is lost. Save drafts to
-`localStorage` keyed by thread ID.
-
-- [ ] In the reply composer, use a `useEffect` to save the draft to localStorage on content change
-  (debounce 1 second to avoid excessive writes):
-  ```typescript
-  const DRAFT_KEY = `forum_draft_thread_${threadId}`;
-
-  // On mount: restore saved draft
-  useEffect(() => {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    if (saved) setReplyContent(saved);
-  }, [threadId]);
-
-  // On change: save draft (debounced)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (replyContent.trim()) {
-        localStorage.setItem(DRAFT_KEY, replyContent);
-      } else {
-        localStorage.removeItem(DRAFT_KEY);
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [replyContent, threadId]);
-  ```
-- [ ] Clear the draft from localStorage after a successful post submission.
-- [ ] Show a subtle "Draft saved" indicator in the composer after the draft is persisted (optional,
-  small muted text below the character counter).
-- [ ] Apply the same pattern to the thread creation modal in `ForumPage.tsx`, keyed as
-  `forum_draft_new_thread`.
+- [x] `RichReplyEditor.tsx`: draft saved to `localStorage` keyed as `forum_draft_thread_${threadId}` (reply mode only); debounced 1 s; restored on mount; cleared on successful post
+- [x] "Draft saved" indicator shows briefly after each save
+- [x] `NewThreadModal` in `ForumPage.tsx`: title + body saved to `forum_draft_new_thread` (create mode only); debounced 1 s; restored on mount; cleared on successful create
 
 ---
 
