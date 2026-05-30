@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ForumThread, ForumPost, Paginated } from "../api/manApi";
-import { getMyForumThreads, getMyForumPosts, getMyForumVotes } from "../api/manApi";
+import { getMyForumThreads, getMyForumPosts, getMyForumVotes, fetchMyBookmarks, togglePostBookmark } from "../api/manApi";
 import { mdToPlainText } from "../util/strings";
+import { wasEdited } from "../util/dateUtils";
 
-type Tab = "threads" | "posts" | "votes";
+type Tab = "threads" | "posts" | "votes" | "saved";
 
 const PAGE_SIZE = 10;
 
@@ -116,6 +117,12 @@ export function ForumActivitySection() {
   const [votesError, setVotesError] = useState<string | null>(null);
   const [votesPage, setVotesPage] = useState(1);
 
+  // Saved (bookmarks)
+  const [savedData, setSavedData] = useState<Paginated<ForumPost> | null>(null);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedError, setSavedError] = useState<string | null>(null);
+  const [savedPage, setSavedPage] = useState(1);
+
   // Fetch all three on mount so counts are always visible in every tab pill.
   // Re-fetch the relevant tab when its page changes (page > 1 guard avoids
   // a duplicate fetch since mount already loaded page 1).
@@ -169,10 +176,23 @@ export function ForumActivitySection() {
     return () => { cancelled = true; };
   }, [votesPage]);
 
+  // Load bookmarks when tab first opened, and on page changes
+  useEffect(() => {
+    if (tab !== "saved") return;
+    let cancelled = false;
+    setSavedLoading(true);
+    setSavedError(null);
+    fetchMyBookmarks(savedPage, PAGE_SIZE)
+      .then((d) => { if (!cancelled) { setSavedData(d); setSavedLoading(false); } })
+      .catch(() => { if (!cancelled) { setSavedError("Could not load saved posts."); setSavedLoading(false); } });
+    return () => { cancelled = true; };
+  }, [tab, savedPage]);
+
   const tabConfig: { key: Tab; label: string; count: number | undefined; loading: boolean }[] = [
     { key: "threads", label: "Threads", count: threadsData?.total, loading: threadsLoading && threadsData === null },
     { key: "posts", label: "Replies", count: postsData?.total, loading: postsLoading && postsData === null },
     { key: "votes", label: "Votes", count: votesData?.total, loading: votesLoading && votesData === null },
+    { key: "saved", label: "Saved", count: savedData?.total, loading: savedLoading && savedData === null },
   ];
 
   return (
@@ -280,8 +300,11 @@ export function ForumActivitySection() {
                 </div>
               )}
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-slate-400 dark:text-slate-500">
+                <p className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                   {shortDate(p.created_at)}
+                  {wasEdited(p.created_at, p.updated_at) && (
+                    <span className="italic">(edited)</span>
+                  )}
                 </p>
                 {p.thread_id ? (
                   <Link
@@ -337,8 +360,11 @@ export function ForumActivitySection() {
                 ) : null}
               </div>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-slate-400 dark:text-slate-500">
+                <p className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                   {shortDate(p.created_at)}
+                  {wasEdited(p.created_at, p.updated_at) && (
+                    <span className="italic">(edited)</span>
+                  )}
                 </p>
                 {p.thread_id ? (
                   <Link
@@ -358,6 +384,74 @@ export function ForumActivitySection() {
               hasPrev={votesData.has_prev}
               hasNext={votesData.has_next}
               onGo={setVotesPage}
+            />
+          )}
+        </TabShell>
+      )}
+
+      {/* Saved tab */}
+      {tab === "saved" && (
+        <TabShell
+          loading={savedLoading}
+          error={savedError}
+          empty={savedData !== null && savedData.total === 0}
+          emptyMessage="You haven't saved any posts yet."
+        >
+          {savedData?.items.map((p) => (
+            <div
+              key={p.id}
+              className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-[#342b24] dark:bg-[#181310]"
+            >
+              <p className="text-sm leading-relaxed text-slate-700 dark:text-stone-200">
+                {truncate(mdToPlainText(p.content_markdown))}
+              </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                  {p.author_username && (
+                    <span>by <span className="font-medium text-slate-600 dark:text-slate-300">{p.author_username}</span></span>
+                  )}
+                  <span>·</span>
+                  <span>{shortDate(p.created_at)}</span>
+                  {wasEdited(p.created_at, p.updated_at) && (
+                    <span className="italic">(edited)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {p.thread_id ? (
+                    <Link
+                      to={`/forum/${p.thread_id}#post-${p.id}`}
+                      className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      View →
+                    </Link>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!p.thread_id) return;
+                      await togglePostBookmark(p.thread_id, p.id).catch(() => {});
+                      setSavedData((prev) =>
+                        prev
+                          ? { ...prev, items: prev.items.filter((x) => x.id !== p.id), total: prev.total - 1 }
+                          : prev
+                      );
+                    }}
+                    className="rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#342b24] dark:text-slate-400 dark:hover:border-rose-800/60 dark:hover:bg-rose-950/20 dark:hover:text-rose-400"
+                    title="Remove bookmark"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {savedData && (
+            <MiniPager
+              page={savedData.page}
+              totalPages={savedData.total_pages}
+              hasPrev={savedData.has_prev}
+              hasNext={savedData.has_next}
+              onGo={setSavedPage}
             />
           )}
         </TabShell>

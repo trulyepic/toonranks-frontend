@@ -146,13 +146,15 @@ Suggested branch: `frontend-forum-post-reporting` — **complete, pending merge*
 
 ---
 
-## Phase 6: Thread Bookmarking UI
+## ✅ Phase 6: Thread Bookmarking UI
 
-Suggested branch: `frontend-forum-bookmarking`
+Suggested branch: `frontend-forum-bookmarking` — **complete, pending merge**
 
-**Backend dependency:** Requires backend Phase 4 (`ForumBookmark` table and endpoints) to be deployed first.
-
-**Files:** `src/pages/ThreadPage.tsx`, `src/api/manApi.ts`
+- [x] `viewer_has_bookmarked` added to `ForumPost` type
+- [x] `togglePostBookmark` and `fetchMyBookmarks` API functions added
+- [x] 🔖 bookmark button on every reply — amber when saved, outline when not; optimistic toggle with revert on error
+- [x] "Saved" tab added to `ForumActivitySection` — lazy loads on first open; shows excerpt, author, date, View link, and ✕ remove button
+- [x] Removing from Saved list optimistically removes the row without a page reload
 
 ### 6a — API functions
 

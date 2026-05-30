@@ -19,6 +19,7 @@ import {
   setForumPostVote,
   getForumThreadPaged,
   reportPost,
+  togglePostBookmark,
 } from "../api/manApi";
 import { useUser } from "../login/useUser";
 import ReactMarkdown from "react-markdown";
@@ -1465,6 +1466,7 @@ function ReplyBranch({
   const [reportReason, setReportReason] = useState("");
   const [reported, setReported] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
+  const [bookmarked, setBookmarked] = useState(!!post.viewer_has_bookmarked);
 
   function lightenHex(hex: string, amount = 0.35) {
     const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -1716,6 +1718,31 @@ function ReplyBranch({
               }
             }}
           />
+
+          {/* Bookmark button — visible to authenticated users */}
+          {currentUsername && (
+            <button
+              type="button"
+              onClick={async () => {
+                const prev = bookmarked;
+                setBookmarked(!prev);
+                try {
+                  await togglePostBookmark(threadId, post.id);
+                } catch {
+                  setBookmarked(prev);
+                  notify({ title: "Action failed", message: "Could not update bookmark.", variant: "error" });
+                }
+              }}
+              title={bookmarked ? "Remove bookmark" : "Bookmark this post"}
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition ${
+                bookmarked
+                  ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-300"
+                  : "border-slate-200 text-slate-500 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-[#3a3028] dark:text-slate-400 dark:hover:border-amber-700/60 dark:hover:bg-amber-950/20 dark:hover:text-amber-300"
+              }`}
+            >
+              {bookmarked ? "🔖 Saved" : "🔖"}
+            </button>
+          )}
 
           {/* Report button — visible to authenticated non-authors on unlocked threads */}
           {currentUsername && currentUsername !== post.author_username && !reported && (

@@ -483,6 +483,7 @@ export type ForumPost = {
   viewer_vote?: "UPVOTE" | "DOWNVOTE" | null;
   heart_count?: number;
   viewer_has_hearted?: boolean;
+  viewer_has_bookmarked?: boolean;
 };
 
 export interface Issue {
@@ -1421,6 +1422,26 @@ export async function setThreadPin(
     `/forum/threads/${thread_id}/pin`,
     { pinned }
   );
+  return res.data;
+}
+
+export async function togglePostBookmark(
+  thread_id: number,
+  post_id: number
+): Promise<{ bookmarked: boolean }> {
+  const res = await api.post<{ bookmarked: boolean }>(
+    `/forum/threads/${thread_id}/posts/${post_id}/bookmark`
+  );
+  return res.data;
+}
+
+export async function fetchMyBookmarks(
+  page = 1,
+  page_size = 20
+): Promise<Paginated<ForumPost>> {
+  const res = await api.get<Paginated<ForumPost>>("/forum/me/bookmarks", {
+    params: { page, page_size },
+  });
   return res.data;
 }
 
