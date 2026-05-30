@@ -2,7 +2,7 @@ import type React from "react";
 
 interface MarkdownToolbarProps {
   /** Ref to the textarea being formatted */
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   /** Current textarea value */
   value: string;
   /** Called with the new value after a format action */
