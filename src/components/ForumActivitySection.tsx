@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { ForumThread, ForumPost, Paginated } from "../api/manApi";
-import { getMyForumThreads, getMyForumPosts, getMyForumVotes, fetchMyBookmarks, togglePostBookmark } from "../api/manApi";
+import { getMyForumThreads, getMyForumPosts, getMyForumVotes, fetchMyBookmarks, togglePostBookmark, fetchMyFollowing, toggleThreadFollow } from "../api/manApi";
 import { mdToPlainText } from "../util/strings";
 import { wasEdited } from "../util/dateUtils";
 
-type Tab = "threads" | "posts" | "votes" | "saved";
+type Tab = "threads" | "posts" | "votes" | "saved" | "following";
 
 const PAGE_SIZE = 10;
 
@@ -123,6 +123,12 @@ export function ForumActivitySection() {
   const [savedError, setSavedError] = useState<string | null>(null);
   const [savedPage, setSavedPage] = useState(1);
 
+  // Following
+  const [followingData, setFollowingData] = useState<Paginated<ForumThread> | null>(null);
+  const [followingLoading, setFollowingLoading] = useState(false);
+  const [followingError, setFollowingError] = useState<string | null>(null);
+  const [followingPage, setFollowingPage] = useState(1);
+
   // Fetch all three on mount so counts are always visible in every tab pill.
   // Re-fetch the relevant tab when its page changes (page > 1 guard avoids
   // a duplicate fetch since mount already loaded page 1).
@@ -176,6 +182,18 @@ export function ForumActivitySection() {
     return () => { cancelled = true; };
   }, [votesPage]);
 
+  // Load following when tab first opened, and on page changes
+  useEffect(() => {
+    if (tab !== "following") return;
+    let cancelled = false;
+    setFollowingLoading(true);
+    setFollowingError(null);
+    fetchMyFollowing(followingPage, PAGE_SIZE)
+      .then((d) => { if (!cancelled) { setFollowingData(d); setFollowingLoading(false); } })
+      .catch(() => { if (!cancelled) { setFollowingError("Could not load followed threads."); setFollowingLoading(false); } });
+    return () => { cancelled = true; };
+  }, [tab, followingPage]);
+
   // Load bookmarks when tab first opened, and on page changes
   useEffect(() => {
     if (tab !== "saved") return;
@@ -193,6 +211,7 @@ export function ForumActivitySection() {
     { key: "posts", label: "Replies", count: postsData?.total, loading: postsLoading && postsData === null },
     { key: "votes", label: "Votes", count: votesData?.total, loading: votesLoading && votesData === null },
     { key: "saved", label: "Saved", count: savedData?.total, loading: savedLoading && savedData === null },
+    { key: "following", label: "Following", count: followingData?.total, loading: followingLoading && followingData === null },
   ];
 
   return (
@@ -452,6 +471,60 @@ export function ForumActivitySection() {
               hasPrev={savedData.has_prev}
               hasNext={savedData.has_next}
               onGo={setSavedPage}
+            />
+          )}
+        </TabShell>
+      )}
+
+      {/* Following tab */}
+      {tab === "following" && (
+        <TabShell
+          loading={followingLoading}
+          error={followingError}
+          empty={followingData !== null && followingData.total === 0}
+          emptyMessage="You aren't following any threads yet."
+        >
+          {followingData?.items.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-start justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-[#342b24] dark:bg-[#181310]"
+            >
+              <div className="min-w-0 flex-1 space-y-1">
+                <Link
+                  to={`/forum/${t.id}`}
+                  className="block text-sm font-semibold text-slate-900 hover:underline dark:text-stone-100"
+                >
+                  {t.title}
+                </Link>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t.post_count} {t.post_count === 1 ? "post" : "posts"} · updated{" "}
+                  {shortDate(t.updated_at)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  await toggleThreadFollow(t.id).catch(() => {});
+                  setFollowingData((prev) =>
+                    prev
+                      ? { ...prev, items: prev.items.filter((x) => x.id !== t.id), total: prev.total - 1 }
+                      : prev
+                  );
+                }}
+                className="shrink-0 rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#342b24] dark:text-slate-400 dark:hover:border-rose-800/60 dark:hover:bg-rose-950/20 dark:hover:text-rose-400"
+                title="Unfollow"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          {followingData && (
+            <MiniPager
+              page={followingData.page}
+              totalPages={followingData.total_pages}
+              hasPrev={followingData.has_prev}
+              hasNext={followingData.has_next}
+              onGo={setFollowingPage}
             />
           )}
         </TabShell>

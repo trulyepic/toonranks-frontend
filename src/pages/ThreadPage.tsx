@@ -20,6 +20,7 @@ import {
   getForumThreadPaged,
   reportPost,
   togglePostBookmark,
+  toggleThreadFollow,
 } from "../api/manApi";
 import { useUser } from "../login/useUser";
 import ReactMarkdown from "react-markdown";
@@ -813,6 +814,29 @@ export default function ThreadPage() {
                 >
                   🛈 Latest updates first
                 </span>
+              )}
+
+              {user && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const wasFollowing = !!thread?.viewer_is_following;
+                    setThread((t) => t ? { ...t, viewer_is_following: !wasFollowing } : t);
+                    try {
+                      await toggleThreadFollow(thread!.id);
+                    } catch {
+                      setThread((t) => t ? { ...t, viewer_is_following: wasFollowing } : t);
+                      notice.show({ title: "Action failed", message: "Could not update follow.", variant: "error" });
+                    }
+                  }}
+                  className={`${pillBase} ${
+                    thread?.viewer_is_following
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-[#3a3028] dark:bg-transparent dark:text-slate-300 dark:hover:border-emerald-700/60 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-300"
+                  }`}
+                >
+                  {thread?.viewer_is_following ? "✓ Following" : "Follow"}
+                </button>
               )}
 
               <Link

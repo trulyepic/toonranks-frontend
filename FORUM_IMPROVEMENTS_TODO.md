@@ -211,13 +211,14 @@ export const fetchMyBookmarks = async (page = 1): Promise<ForumBookmarksPage> =>
 
 ---
 
-## Phase 7: Thread Following UI
+## ✅ Phase 7: Thread Following UI
 
-Suggested branch: `frontend-forum-following`
+Suggested branch: `frontend-forum-following` — **complete, pending merge**
 
-**Backend dependency:** Requires backend Phase 4 (`ForumFollower` table and endpoints).
-
-**Files:** `src/pages/ThreadPage.tsx`, `src/api/manApi.ts`
+- [x] `viewer_is_following` added to `ForumThread` type
+- [x] `toggleThreadFollow` and `fetchMyFollowing` API functions added
+- [x] Follow/Following button in thread header pill row — emerald when following, outline when not; optimistic toggle with revert on error
+- [x] "Following" tab added to `ForumActivitySection` — lazy loads on first open; shows thread title, post count, updated date, ✕ unfollow button
 
 ### 7a — API function
 
