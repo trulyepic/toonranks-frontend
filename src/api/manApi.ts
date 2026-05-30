@@ -465,6 +465,7 @@ export type ForumThread = {
   latest_first?: boolean;
   is_pinned?: boolean;
   view_count?: number;
+  viewer_is_following?: boolean;
 };
 export type ForumPost = {
   id: number;
@@ -1422,6 +1423,25 @@ export async function setThreadPin(
     `/forum/threads/${thread_id}/pin`,
     { pinned }
   );
+  return res.data;
+}
+
+export async function toggleThreadFollow(
+  thread_id: number
+): Promise<{ following: boolean; follower_count: number }> {
+  const res = await api.post<{ following: boolean; follower_count: number }>(
+    `/forum/threads/${thread_id}/follow`
+  );
+  return res.data;
+}
+
+export async function fetchMyFollowing(
+  page = 1,
+  page_size = 20
+): Promise<Paginated<ForumThread>> {
+  const res = await api.get<Paginated<ForumThread>>("/forum/me/following", {
+    params: { page, page_size },
+  });
   return res.data;
 }
 
