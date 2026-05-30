@@ -59,7 +59,6 @@ export default function RichReplyEditor({
     if (!draftKey) return;
     const saved = localStorage.getItem(draftKey);
     if (saved) setValue(saved);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey]);
 
   // Save draft on change (debounced 1 s)
@@ -119,23 +118,6 @@ export default function RichReplyEditor({
     }
     return fallback;
   }
-
-  const wrapSelection = (left: string, right = left) => {
-    const el = taRef.current;
-    if (!el) return;
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
-    const before = value.slice(0, start);
-    const sel = value.slice(start, end);
-    const after = value.slice(end);
-    const next = `${before}${left}${sel}${right}${after}`;
-    setValue(next);
-    queueMicrotask(() => {
-      el.focus();
-      const cursorStart = start + left.length;
-      el.setSelectionRange(cursorStart, cursorStart + sel.length);
-    });
-  };
 
   const extractIds = (text: string) =>
     Array.from(text.matchAll(/\(series:(\d+)\)/g)).map((m) => Number(m[1]));
