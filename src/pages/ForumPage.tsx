@@ -3,12 +3,17 @@ import {
   createForumThread,
   type ForumThread,
   type ForumSeriesRef,
+  type ForumCategory,
   forumSeriesSearch,
   deleteForumThread,
   getForumThread,
   updateForumThread,
   listForumThreadsPaged,
   setThreadPin,
+  fetchForumCategories,
+  createForumCategory,
+  updateForumCategory,
+  deleteForumCategory,
 } from "../api/manApi";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "../login/useUser";
@@ -155,6 +160,18 @@ export default function ForumPage() {
     () => (sessionStorage.getItem(SORT_KEY) as SortOption | null) ?? "activity"
   );
 
+  const [categories, setCategories] = useState<ForumCategory[]>([]);
+  const [activeCategorySlug, setActiveCategorySlug] = useState<string | null>(null);
+  const activeCategory = categories.find((c) => c.slug === activeCategorySlug) ?? null;
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+
+  const reloadCategories = () =>
+    fetchForumCategories().then(setCategories).catch(() => {});
+
+  useEffect(() => {
+    reloadCategories();
+  }, []);
+
   const myName = user?.username || "";
   const isAdmin = (user?.role || "").toUpperCase() === "ADMIN";
 
@@ -194,7 +211,10 @@ export default function ForumPage() {
   // };
 
   const load = async () => {
-    const r = await listForumThreadsPaged(q, page, pageSize, { sort: sortBy });
+    const r = await listForumThreadsPaged(q, page, pageSize, {
+      sort: sortBy,
+      ...(activeCategorySlug ? { category_slug: activeCategorySlug } : {}),
+    });
     const items = r.items.slice();
 
     setThreads(items);
@@ -226,7 +246,7 @@ export default function ForumPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, page, sortBy, user?.id]);
+  }, [q, page, sortBy, activeCategorySlug, user?.id]);
 
   const onClickNewThread = () => {
     if (!user) {
@@ -296,12 +316,22 @@ export default function ForumPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={onClickNewThread}
-            className="inline-flex w-full items-center justify-center rounded-full bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 sm:w-auto"
-          >
-            New Thread
-          </button>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            {isAdmin && (
+              <button
+                onClick={() => setShowCategoryManager(true)}
+                className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-200 dark:hover:bg-[#241d19] sm:flex-none"
+              >
+                ⚙ Categories
+              </button>
+            )}
+            <button
+              onClick={onClickNewThread}
+              className="inline-flex flex-1 items-center justify-center rounded-full bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 sm:flex-none"
+            >
+              New Thread
+            </button>
+          </div>
         </div>
       </div>
 
@@ -343,33 +373,72 @@ export default function ForumPage() {
         />
       </div>
 
-      {/* Sort controls */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Sort:</span>
-        {(
-          [
-            { value: "activity", label: "Active" },
-            { value: "newest",   label: "Newest" },
-            { value: "replies",  label: "Most replies" },
-          ] as { value: SortOption; label: string }[]
-        ).map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => {
-              if (sortBy === value) return;
-              sessionStorage.setItem(SORT_KEY, value);
-              setSortBy(value);
-              setSearchParams({ page: "1" });
-            }}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-              sortBy === value
-                ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-300 dark:hover:bg-[#241d19]"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      {/* Sort + Category controls */}
+      <div className="flex flex-col gap-3 pb-2">
+
+        {/* Sort row */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Sort:</span>
+          {(
+            [
+              { value: "activity", label: "Active" },
+              { value: "newest",   label: "Newest" },
+              { value: "replies",  label: "Most replies" },
+            ] as { value: SortOption; label: string }[]
+          ).map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => {
+                if (sortBy === value) return;
+                sessionStorage.setItem(SORT_KEY, value);
+                setSortBy(value);
+                setSearchParams({ page: "1" });
+              }}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                sortBy === value
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-300 dark:hover:bg-[#241d19]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Category row */}
+        {categories.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => { setActiveCategorySlug(null); setSearchParams({ page: "1" }); }}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  activeCategorySlug === null
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-300 dark:hover:bg-[#241d19]"
+                }`}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.slug}
+                  onClick={() => { setActiveCategorySlug(cat.slug); setSearchParams({ page: "1" }); }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                    activeCategorySlug === cat.slug
+                      ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-300 dark:hover:bg-[#241d19]"
+                  }`}
+                >
+                  {cat.name}
+                  <span className="ml-1 opacity-50">({cat.thread_count})</span>
+                </button>
+              ))}
+            </div>
+            {activeCategory?.description && (
+              <p className="text-xs text-slate-400 dark:text-slate-500">{activeCategory.description}</p>
+            )}
+          </div>
+        )}
       </div>
 
       <ul className="space-y-3">
@@ -548,6 +617,12 @@ export default function ForumPage() {
                     </span>
                   )}
 
+                  {!activeCategorySlug && t.category_name && (
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600 dark:bg-[#241d19] dark:text-slate-300">
+                      {t.category_name}
+                    </span>
+                  )}
+
                   {t.locked && (
                     <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:bg-amber-950/35 dark:text-amber-200">
                       Locked
@@ -592,6 +667,8 @@ export default function ForumPage() {
           }}
           myThreadCount={myThreadCount}
           maxThreads={MAX_THREADS_PER_USER}
+          categories={categories}
+          defaultCategorySlug={activeCategorySlug ?? undefined}
         />
       )}
 
@@ -602,6 +679,7 @@ export default function ForumPage() {
           threadId={editingThread.id}
           initialTitle={editingThread.title}
           initialMd={editingBody}
+          initialCategoryId={editingThread.category_id ?? null}
           onClose={() => setEditingThread(null)}
           onSaved={async () => {
             await load();
@@ -614,6 +692,7 @@ export default function ForumPage() {
           }}
           myThreadCount={myThreadCount}
           maxThreads={MAX_THREADS_PER_USER}
+          categories={categories}
         />
       )}
 
@@ -681,6 +760,245 @@ export default function ForumPage() {
         variant={notice.variant}
         onClose={notice.hide}
       />
+
+      {showCategoryManager && (
+        <CategoryManagerModal
+          categories={categories}
+          onClose={() => setShowCategoryManager(false)}
+          onChanged={reloadCategories}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Category Manager Modal (admin only)
+// ─────────────────────────────────────────────
+function CategoryManagerModal({
+  categories,
+  onClose,
+  onChanged,
+}: {
+  categories: ForumCategory[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const notice = useNotice();
+
+  // Edit state
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editPos, setEditPos] = useState(0);
+  const [editBusy, setEditBusy] = useState(false);
+
+  // Add state
+  const [addName, setAddName] = useState("");
+  const [addSlug, setAddSlug] = useState("");
+  const [addDesc, setAddDesc] = useState("");
+  const [addPos, setAddPos] = useState(categories.length);
+  const [addBusy, setAddBusy] = useState(false);
+
+  // Auto-generate slug from name
+  const toSlug = (s: string) =>
+    s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+  const startEdit = (cat: ForumCategory) => {
+    setEditingId(cat.id);
+    setEditName(cat.name);
+    setEditSlug(cat.slug);
+    setEditDesc(cat.description ?? "");
+    setEditPos(cat.position);
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    setEditBusy(true);
+    try {
+      await updateForumCategory(editingId, {
+        name: editName.trim(),
+        slug: editSlug.trim(),
+        description: editDesc.trim() || undefined,
+        position: editPos,
+      });
+      onChanged();
+      setEditingId(null);
+    } catch {
+      notice.show({ title: "Save failed", message: "Could not update category.", variant: "error" });
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
+  const handleDelete = async (cat: ForumCategory) => {
+    if (!window.confirm(`Delete "${cat.name}"? This only works if no threads are assigned to it.`)) return;
+    try {
+      await deleteForumCategory(cat.id);
+      onChanged();
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        notice.show({ title: "Cannot delete", message: "Re-assign all threads in this category first.", variant: "warning" });
+      } else {
+        notice.show({ title: "Delete failed", message: "Could not delete category.", variant: "error" });
+      }
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!addName.trim() || !addSlug.trim()) {
+      notice.show({ title: "Required", message: "Name and slug are required.", variant: "warning" });
+      return;
+    }
+    setAddBusy(true);
+    try {
+      await createForumCategory({
+        name: addName.trim(),
+        slug: addSlug.trim(),
+        description: addDesc.trim() || undefined,
+        position: addPos,
+      });
+      onChanged();
+      setAddName("");
+      setAddSlug("");
+      setAddDesc("");
+      setAddPos(categories.length + 1);
+    } catch {
+      notice.show({ title: "Create failed", message: "A category with that name or slug may already exist.", variant: "error" });
+    } finally {
+      setAddBusy(false);
+    }
+  };
+
+  const fieldClass = "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 dark:border-[#3a3028] dark:bg-[#18120f] dark:text-stone-100 placeholder:text-slate-400 dark:placeholder:text-stone-500";
+  const labelClass = "block mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-[1.75rem] bg-white p-5 shadow-xl dark:border dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(30,24,20,0.98),rgba(21,17,14,0.98))] sm:max-h-[calc(100vh-2rem)] sm:max-w-2xl sm:rounded-2xl">
+
+        {/* Header */}
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Manage Categories</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">✕</button>
+        </div>
+
+        {/* Existing categories */}
+        <div className="mb-6 space-y-2">
+          {categories.map((cat) =>
+            editingId === cat.id ? (
+              <div key={cat.id} className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Name</label>
+                    <input value={editName} onChange={(e) => setEditName(e.target.value)} className={fieldClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Slug</label>
+                    <input value={editSlug} onChange={(e) => setEditSlug(e.target.value)} className={fieldClass} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-[1fr_80px] gap-3">
+                  <div>
+                    <label className={labelClass}>Description</label>
+                    <input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Optional" className={fieldClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Order</label>
+                    <input type="number" value={editPos} onChange={(e) => setEditPos(Number(e.target.value))} className={fieldClass} />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={saveEdit} disabled={editBusy} className="rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:bg-blue-700">
+                    {editBusy ? "Saving…" : "Save"}
+                  </button>
+                  <button onClick={() => setEditingId(null)} className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-semibold text-slate-600 dark:border-[#3a3028] dark:text-stone-300">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div key={cat.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 px-4 py-3 dark:border-[#342b24] dark:bg-[#181310]">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 dark:text-stone-100">{cat.name}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">/{cat.slug}</span>
+                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-[#241d19] dark:text-slate-400">
+                      {cat.thread_count} threads
+                    </span>
+                  </div>
+                  {cat.description && (
+                    <p className="mt-0.5 truncate text-xs text-slate-400 dark:text-slate-500">{cat.description}</p>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    onClick={() => startEdit(cat)}
+                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-[#342b24] dark:text-stone-300"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(cat)}
+                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#342b24] dark:text-stone-300"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Add new category */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 dark:border-[#342b24] dark:bg-[#181310]">
+          <h3 className="mb-3 text-sm font-bold text-slate-800 dark:text-stone-100">Add category</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>Name</label>
+              <input
+                value={addName}
+                onChange={(e) => {
+                  setAddName(e.target.value);
+                  if (!addSlug || addSlug === toSlug(addName)) setAddSlug(toSlug(e.target.value));
+                }}
+                placeholder="e.g. Recommendations"
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Slug</label>
+              <input
+                value={addSlug}
+                onChange={(e) => setAddSlug(e.target.value)}
+                placeholder="e.g. recommendations"
+                className={fieldClass}
+              />
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-[1fr_80px] gap-3">
+            <div>
+              <label className={labelClass}>Description</label>
+              <input value={addDesc} onChange={(e) => setAddDesc(e.target.value)} placeholder="Optional" className={fieldClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Order</label>
+              <input type="number" value={addPos} onChange={(e) => setAddPos(Number(e.target.value))} className={fieldClass} />
+            </div>
+          </div>
+          <button
+            onClick={handleAdd}
+            disabled={addBusy}
+            className="mt-3 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50 hover:bg-emerald-700"
+          >
+            {addBusy ? "Adding…" : "Add Category"}
+          </button>
+        </div>
+
+      </div>
+      <NoticeModal open={notice.open} title={notice.title} message={notice.message} variant={notice.variant} onClose={notice.hide} />
     </div>
   );
 }
@@ -765,6 +1083,9 @@ function NewThreadModal({
   initialTitle = "",
   initialMd = "",
   threadId,
+  categories = [],
+  defaultCategorySlug,
+  initialCategoryId,
 }: {
   onClose: () => void;
   onCreated?: (t: ForumThread) => void;
@@ -775,9 +1096,18 @@ function NewThreadModal({
   initialTitle?: string;
   initialMd?: string;
   threadId?: number;
+  categories?: ForumCategory[];
+  defaultCategorySlug?: string;
+  initialCategoryId?: number | null;
 }) {
   const { user } = useUser();
   const notice = useNotice();
+
+  const defaultCategoryId =
+    initialCategoryId !== undefined
+      ? initialCategoryId
+      : (categories.find((c) => c.slug === defaultCategorySlug)?.id ?? null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(defaultCategoryId);
 
   const THREAD_DRAFT_KEY = "forum_draft_new_thread";
 
@@ -1044,6 +1374,7 @@ function NewThreadModal({
         title: cleanTitle,
         first_post_markdown: md,
         series_ids,
+        ...(selectedCategoryId ? { category_id: selectedCategoryId } : {}),
       });
       localStorage.removeItem(THREAD_DRAFT_KEY);
       onCreated?.(t);
@@ -1105,6 +1436,7 @@ function NewThreadModal({
         title: cleanTitle,
         first_post_markdown: body,
         ...(series_ids.length > 0 ? { series_ids } : {}),
+        category_id: selectedCategoryId ?? 0,  // 0 = unset on backend
       });
       onSaved?.();
       onClose();
@@ -1147,6 +1479,30 @@ function NewThreadModal({
         ) : (
           <div className="mb-2 text-xs text-gray-500 dark:text-stone-400">
             Editing thread details.
+          </div>
+        )}
+
+        {categories.length > 0 && (
+          <div className="mb-3">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Category
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    selectedCategoryId === cat.id
+                      ? "border-slate-900 bg-slate-900 text-white dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-[#3a3028] dark:text-stone-300 dark:hover:bg-[#241d19]"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

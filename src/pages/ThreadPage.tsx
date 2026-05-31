@@ -788,13 +788,23 @@ export default function ThreadPage() {
       ) : (
         <>
       <header className="mb-4 space-y-3">
-          <Link
-            to="/forum"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.96),_rgba(21,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]"
-          >
-            <span aria-hidden>←</span>
-            <span>Back to forum</span>
-          </Link>
+          <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+            <Link
+              to="/forum"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.96),_rgba(21,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]"
+            >
+              <span aria-hidden>←</span>
+              <span>Forum</span>
+            </Link>
+            {thread?.category_name && (
+              <>
+                <span className="text-slate-300 dark:text-slate-600">/</span>
+                <span className="font-medium text-slate-600 dark:text-slate-300">
+                  {thread.category_name}
+                </span>
+              </>
+            )}
+          </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <h1 className="text-2xl font-bold text-slate-950 dark:text-white">
