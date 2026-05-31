@@ -18,6 +18,7 @@ import { canSubmitSeriesUser, isAdminUser } from "../util/roleUtils";
 import { searchSeries, type RankedSeries } from "../api/manApi";
 import UserAvatar from "./UserAvatar";
 import { inlineUsernameClassName } from "../util/userDisplay";
+import NotificationBell from "./NotificationBell";
 
 const DEFAULT_LABEL = "ALL";
 
@@ -285,6 +286,7 @@ const Header = () => {
           >
             <MagnifyingGlassIcon className="h-5 w-5" />
           </button>
+          {user && <NotificationBell />}
           <button
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 dark-theme-card dark:text-slate-300 dark:hover:bg-[#241d19] dark:hover:text-white"
             onClick={() =>
@@ -345,6 +347,8 @@ const Header = () => {
               <MoonIcon className="h-5 w-5" />
             )}
           </button>
+
+          {user && <NotificationBell />}
 
           {user ? (
             <>

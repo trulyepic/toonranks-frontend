@@ -1959,3 +1959,48 @@ export const getLeaderboard = async (
   });
   return res.data;
 };
+
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+export type NotificationOut = {
+  id: number;
+  kind: string; // THREAD_REPLY | THREAD_FOLLOW_REPLY | POST_MENTION
+  is_read: boolean;
+  created_at: string;
+  read_at: string | null;
+  thread_id: number | null;
+  post_id: number | null;
+  actor_username: string | null;
+  summary: string | null;
+};
+
+export type NotificationsPage = {
+  items: NotificationOut[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_prev: boolean;
+  has_next: boolean;
+  unread_count: number;
+};
+
+export async function fetchNotifications(page = 1): Promise<NotificationsPage> {
+  const res = await api.get<NotificationsPage>("/notifications", {
+    params: { page, page_size: 20 },
+  });
+  return res.data;
+}
+
+export async function fetchUnreadCount(): Promise<{ count: number }> {
+  const res = await api.get<{ count: number }>("/notifications/unread-count");
+  return res.data;
+}
+
+export async function markNotificationRead(id: number): Promise<void> {
+  await api.patch(`/notifications/${id}/read`);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await api.post("/notifications/read-all");
+}
