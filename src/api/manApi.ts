@@ -477,6 +477,8 @@ export type ForumThread = {
   viewer_is_following?: boolean;
   category_id?: number | null;
   category_name?: string | null;
+  has_unread?: boolean;
+  unread_count?: number;
 };
 export type ForumPost = {
   id: number;
@@ -1471,6 +1473,13 @@ export async function deleteForumCategory(id: number): Promise<void> {
 export async function fetchForumCategories(): Promise<ForumCategory[]> {
   const res = await api.get<ForumCategory[]>("/forum/categories");
   return res.data;
+}
+
+export async function markThreadRead(
+  thread_id: number,
+  last_seen_post_id: number
+): Promise<void> {
+  await api.post(`/forum/threads/${thread_id}/mark-read`, { last_seen_post_id });
 }
 
 export async function toggleThreadFollow(
