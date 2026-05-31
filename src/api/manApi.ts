@@ -1521,6 +1521,53 @@ export async function fetchMyBookmarks(
   return res.data;
 }
 
+export type ForumReportStatus = "OPEN" | "REVIEWED" | "DISMISSED";
+
+export type ForumReportOut = {
+  id: number;
+  post_id: number;
+  thread_id: number;
+  reporter_username: string | null;
+  reason: string | null;
+  status: ForumReportStatus;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by_username: string | null;
+  post_excerpt: string | null;
+  thread_title: string | null;
+};
+
+export type ForumReportsPage = {
+  items: ForumReportOut[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  has_prev: boolean;
+  has_next: boolean;
+};
+
+export async function fetchForumReports(
+  page = 1,
+  status?: ForumReportStatus
+): Promise<ForumReportsPage> {
+  const res = await api.get<ForumReportsPage>("/forum/reports", {
+    params: { page, page_size: 20, ...(status ? { status } : {}) },
+  });
+  return res.data;
+}
+
+export async function reviewForumReport(
+  id: number,
+  status: "REVIEWED" | "DISMISSED"
+): Promise<void> {
+  await api.patch(`/forum/reports/${id}`, { status });
+}
+
+export async function deleteForumReport(id: number): Promise<void> {
+  await api.delete(`/forum/reports/${id}`);
+}
+
 export async function reportPost(
   thread_id: number,
   post_id: number,
