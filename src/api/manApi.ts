@@ -449,6 +449,15 @@ export type ForumSeriesRef = {
   type?: string;
   status?: string;
 };
+export type ForumCategory = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  position: number;
+  thread_count: number;
+};
+
 export type ForumThread = {
   id: number;
   title: string;
@@ -466,6 +475,8 @@ export type ForumThread = {
   is_pinned?: boolean;
   view_count?: number;
   viewer_is_following?: boolean;
+  category_id?: number | null;
+  category_name?: string | null;
 };
 export type ForumPost = {
   id: number;
@@ -1227,6 +1238,7 @@ export async function listForumThreadsPaged(
     author_id?: number;
     signal?: AbortSignal;
     sort?: "activity" | "newest" | "replies";
+    category_slug?: string;
   }
 ): Promise<Paginated<ForumThread>> {
   const res = await api.get<Paginated<ForumThread>>("/forum/threads-paged", {
@@ -1236,6 +1248,7 @@ export async function listForumThreadsPaged(
       page_size,
       ...(opts?.author_id != null ? { author_id: opts.author_id } : {}),
       ...(opts?.sort ? { sort: opts.sort } : {}),
+      ...(opts?.category_slug ? { category_slug: opts.category_slug } : {}),
     },
     signal: opts?.signal,
   });
@@ -1246,6 +1259,7 @@ export async function createForumThread(input: {
   title: string;
   first_post_markdown: string;
   series_ids?: number[];
+  category_id?: number | null;
 }): Promise<ForumThread> {
   try {
     const res = await api.post<ForumThread>("/forum/threads", input);
@@ -1423,6 +1437,39 @@ export async function setThreadPin(
     `/forum/threads/${thread_id}/pin`,
     { pinned }
   );
+  return res.data;
+}
+
+export async function createForumCategory(input: {
+  name: string;
+  slug: string;
+  description?: string;
+  position?: number;
+}): Promise<ForumCategory> {
+  const res = await api.post<ForumCategory>("/forum/categories", input);
+  return res.data;
+}
+
+export async function updateForumCategory(
+  id: number,
+  input: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    position?: number;
+    is_visible?: boolean;
+  }
+): Promise<ForumCategory> {
+  const res = await api.patch<ForumCategory>(`/forum/categories/${id}`, input);
+  return res.data;
+}
+
+export async function deleteForumCategory(id: number): Promise<void> {
+  await api.delete(`/forum/categories/${id}`);
+}
+
+export async function fetchForumCategories(): Promise<ForumCategory[]> {
+  const res = await api.get<ForumCategory[]>("/forum/categories");
   return res.data;
 }
 
@@ -1612,6 +1659,7 @@ export async function updateForumThread(
     title?: string;
     first_post_markdown?: string;
     series_ids?: number[];
+    category_id?: number | null;
   }
 ): Promise<ForumThread> {
   // Only send provided fields
@@ -1619,6 +1667,7 @@ export async function updateForumThread(
     title?: string;
     first_post_markdown?: string;
     series_ids?: number[];
+    category_id?: number | null;
   } = {};
   if (typeof input.title === "string") body.title = input.title;
   if (typeof input.first_post_markdown === "string") {
@@ -1626,6 +1675,9 @@ export async function updateForumThread(
   }
   if (Array.isArray(input.series_ids)) {
     body.series_ids = input.series_ids.map(Number);
+  }
+  if (input.category_id !== undefined) {
+    body.category_id = input.category_id === 0 ? null : input.category_id;
   }
 
   try {

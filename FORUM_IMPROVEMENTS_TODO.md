@@ -252,9 +252,16 @@ export const toggleThreadFollow = async (threadId: number): Promise<FollowToggle
 
 ---
 
-## Phase 8: Categories / Subforums UI
+## ✅ Phase 8: Categories / Subforums UI
 
-Suggested branch: `frontend-forum-categories`
+Suggested branch: `frontend-forum-categories` — **complete, pending merge**
+
+- [x] `ForumCategory` type + `fetchForumCategories` API function added
+- [x] `category_id` / `category_name` added to `ForumThread` type; `category_id` added to `createForumThread` and `listForumThreadsPaged`
+- [x] Category pill strip in forum list (All + one pill per category with thread count); shows description when a category is active
+- [x] Category badge on each thread row when "All" is selected
+- [x] Category selector in new thread modal — pre-selects the active category if one is chosen
+- [x] `Forum / Category name` breadcrumb in thread header
 
 **Backend dependency:** Requires backend Phase 5 (categories model, migration, and endpoints) to
 be deployed first. Coordinate the migration timing with the backend team before shipping this phase —
