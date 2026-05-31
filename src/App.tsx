@@ -23,6 +23,7 @@ import ForumPage from "./pages/ForumPage";
 import ThreadPage from "./pages/ThreadPage";
 import PublicReadingListPage from "./pages/PublicReadingListPage";
 import PendingTitlesPage from "./pages/PendingTitlesPage";
+import AdminReportsPage from "./pages/AdminReportsPage";
 import MySubmissionsPage from "./pages/MySubmissionsPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -84,6 +85,7 @@ function App() {
                 <Route path="/my-lists" element={<MyReadingListsPage />} />
                 <Route path="/my-submissions" element={<MySubmissionsPage />} />
                 <Route path="/pending-titles" element={<PendingTitlesPage />} />
+                <Route path="/admin/reports" element={<AdminReportsPage />} />
                 <Route path="/issues" element={<IssuesPage />} />
                 <Route path="/report-issue" element={<ReportIssuePage />} />
 

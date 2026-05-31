@@ -377,18 +377,32 @@ const Header = () => {
                     </div>
                     <div className="flex flex-col gap-1">
                       {isAdmin && (
-                        <NavLink
-                          to="/pending-titles"
-                          onClick={() => setAccountMenuOpen(false)}
-                          className={({ isActive }) =>
-                            [
-                              "inline-flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-semibold transition shadow-sm",
-                              isActive ? adminLinkActive : adminLinkIdle,
-                            ].join(" ")
-                          }
-                        >
-                          Review Titles
-                        </NavLink>
+                        <>
+                          <NavLink
+                            to="/pending-titles"
+                            onClick={() => setAccountMenuOpen(false)}
+                            className={({ isActive }) =>
+                              [
+                                "inline-flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-semibold transition shadow-sm",
+                                isActive ? adminLinkActive : adminLinkIdle,
+                              ].join(" ")
+                            }
+                          >
+                            Review Titles
+                          </NavLink>
+                          <NavLink
+                            to="/admin/reports"
+                            onClick={() => setAccountMenuOpen(false)}
+                            className={({ isActive }) =>
+                              [
+                                "inline-flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-semibold transition shadow-sm",
+                                isActive ? adminLinkActive : adminLinkIdle,
+                              ].join(" ")
+                            }
+                          >
+                            Report Queue
+                          </NavLink>
+                        </>
                       )}
                       {canSubmit && (
                         <NavLink
@@ -668,18 +682,32 @@ const Header = () => {
                 {mobileAccountOpen && (
                   <div className="mt-3 flex flex-col gap-2">
                     {isAdmin && (
-                      <NavLink
-                        to="/pending-titles"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={({ isActive }) =>
-                          [
-                            "inline-flex w-full items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-semibold transition shadow-sm",
-                            isActive ? adminLinkActive : adminLinkIdle,
-                          ].join(" ")
-                        }
-                      >
-                        Review Titles
-                      </NavLink>
+                      <>
+                        <NavLink
+                          to="/pending-titles"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={({ isActive }) =>
+                            [
+                              "inline-flex w-full items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-semibold transition shadow-sm",
+                              isActive ? adminLinkActive : adminLinkIdle,
+                            ].join(" ")
+                          }
+                        >
+                          Review Titles
+                        </NavLink>
+                        <NavLink
+                          to="/admin/reports"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={({ isActive }) =>
+                            [
+                              "inline-flex w-full items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-sm font-semibold transition shadow-sm",
+                              isActive ? adminLinkActive : adminLinkIdle,
+                            ].join(" ")
+                          }
+                        >
+                          Report Queue
+                        </NavLink>
+                      </>
                     )}
                     {canSubmit && (
                       <NavLink
