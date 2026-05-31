@@ -475,13 +475,24 @@ export default function ForumPage() {
             >
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <Link
-                    to={`/forum/${t.id}`}
-                    className="text-base font-semibold leading-6 text-slate-900 hover:underline dark:text-stone-50 sm:text-lg"
-                  >
-                    {isPinned && <span className="mr-1">📌</span>}
-                    {stripMdHeading(t.title)}
-                  </Link>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Link
+                      to={`/forum/${t.id}`}
+                      className={`text-base leading-6 hover:underline dark:text-stone-50 sm:text-lg ${
+                        user && t.has_unread
+                          ? "font-bold text-slate-950 dark:text-white"
+                          : "font-semibold text-slate-900 dark:text-stone-50"
+                      }`}
+                    >
+                      {isPinned && <span className="mr-1">📌</span>}
+                      {stripMdHeading(t.title)}
+                    </Link>
+                    {user && t.has_unread && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                        {t.unread_count ? `${t.unread_count} new` : "New"}
+                      </span>
+                    )}
+                  </div>
 
                   {(canDelete || isAdmin) && (
                     <div className="flex items-center gap-2 self-start sm:self-auto">

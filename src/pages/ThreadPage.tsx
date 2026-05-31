@@ -21,6 +21,7 @@ import {
   reportPost,
   togglePostBookmark,
   toggleThreadFollow,
+  markThreadRead,
 } from "../api/manApi";
 import { useUser } from "../login/useUser";
 import ReactMarkdown from "react-markdown";
@@ -677,6 +678,14 @@ export default function ThreadPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId, page]);
+
+  // Mark thread as read after posts load (silent fail — non-critical)
+  useEffect(() => {
+    if (!user || !posts.length) return;
+    const lastPostId = posts[posts.length - 1]?.id;
+    if (!lastPostId) return;
+    markThreadRead(threadId, lastPostId).catch(() => {});
+  }, [posts, threadId, user]);
 
   // Scroll to a specific post when the URL contains a #post-{id} hash.
   // Fires after posts finish loading so the target element is in the DOM.
