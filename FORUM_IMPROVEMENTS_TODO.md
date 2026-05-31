@@ -332,7 +332,7 @@ Update `createThread` payload type to include `category_id?: number`.
 
 ---
 
-## Phase 9: Notification Bell UI
+## ✅ Phase 9: Notification Bell UI
 
 Suggested branch: `frontend-forum-notifications`
 
