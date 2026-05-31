@@ -479,7 +479,7 @@ export interface ForumThreadOut {
 
 ---
 
-## Phase 11: User @-mention Autocomplete in Composer
+## ✅ Phase 11: User @-mention Autocomplete in Composer
 
 Suggested branch: `frontend-forum-mention-autocomplete`
 

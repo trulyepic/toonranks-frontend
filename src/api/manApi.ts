@@ -1951,6 +1951,22 @@ export interface LeaderboardUser {
   series_rated: number;
 }
 
+export type UserSearchResult = {
+  username: string;
+  avatar_url: string | null;
+  avatar_preset: string | null;
+};
+
+export async function searchUsers(
+  q: string,
+  limit = 8
+): Promise<UserSearchResult[]> {
+  const res = await api.get<UserSearchResult[]>("/users/search", {
+    params: { q, limit },
+  });
+  return res.data;
+}
+
 export interface LeaderboardPageOut {
   items: LeaderboardUser[];
   total: number;

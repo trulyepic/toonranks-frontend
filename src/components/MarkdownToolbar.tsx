@@ -115,22 +115,22 @@ export default function MarkdownToolbar({
       action: handleLink,
     },
     {
-      label: "`•`",
+      label: "</>",
       title: "Inline code",
       action: () => wrapSelection("`", "`", "code"),
     },
     {
-      label: "```",
+      label: "≡≡",
       title: "Code block",
       action: () => wrapSelection("```\n", "\n```", "code"),
     },
     {
-      label: "❝",
+      label: "\"",
       title: "Blockquote",
       action: () => prefixLines("> "),
     },
     {
-      label: "•—",
+      label: "• List",
       title: "Unordered list",
       action: () => prefixLines("- "),
     },
