@@ -10,6 +10,7 @@ import {
   type RankedSeries,
   type ReadingList,
   type Series,
+  type SeriesStatus,
 } from "../api/manApi";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useSearch } from "../components/useSearch";
@@ -19,6 +20,7 @@ import CompareManager from "../components/CompareManager";
 import { useUser } from "../login/useUser";
 import ReadingListModal from "../components/ReadingListModal";
 import GenreStrip from "../components/GenreStrip";
+import StatusStrip from "../components/StatusStrip";
 import { canSubmitSeriesUser, isAdminUser } from "../util/roleUtils";
 import {
   absoluteUrl,
@@ -38,6 +40,7 @@ const Home = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [activeStatus, setActiveStatus] = useState<SeriesStatus>(null);
   // const [compareList, setCompareList] = useState<RankedSeries[]>([]);
   const [compareError, setCompareError] = useState<string | null>(null);
 
@@ -140,7 +143,13 @@ const Home = () => {
     setLoading(true);
 
     try {
-      const newItems = await fetchRankedSeriesPaginated(page, PAGE_SIZE);
+      const newItems = await fetchRankedSeriesPaginated(
+        page,
+        PAGE_SIZE,
+        undefined,
+        undefined,
+        activeStatus ?? undefined
+      );
       setItems((prev) => {
         const newIds = new Set(prev.map((item) => item.id));
         const filtered = newItems.filter((item) => !newIds.has(item.id));
@@ -153,7 +162,7 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
-  }, [hasMore, page]);
+  }, [hasMore, page, activeStatus]);
 
   useEffect(() => {
     if (compareError) {
@@ -204,7 +213,13 @@ const Home = () => {
         setHasMore(true);
 
         try {
-          const results = await fetchRankedSeriesPaginated(1, PAGE_SIZE);
+          const results = await fetchRankedSeriesPaginated(
+            1,
+            PAGE_SIZE,
+            undefined,
+            undefined,
+            activeStatus ?? undefined
+          );
           setItems(results);
           if (results.length < PAGE_SIZE) setHasMore(false);
         } catch (err) {
@@ -216,7 +231,7 @@ const Home = () => {
     };
 
     fetchData();
-  }, [searchTerm]);
+  }, [searchTerm, activeStatus]);
 
   useEffect(() => {
     if (!searchTerm) loadSeries();
@@ -305,6 +320,11 @@ const Home = () => {
                     {activeGenre}
                   </span>
                 ) : null}
+                {activeStatus ? (
+                  <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:ring-[#475276] sm:px-3 sm:py-1.5 sm:text-sm">
+                    {activeStatus.replace("_", " ")}
+                  </span>
+                ) : null}
                 {searchTerm.trim() ? (
                   <span className="inline-flex max-w-full items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900 sm:px-3 sm:py-1.5 sm:text-sm">
                     Search: {searchTerm.trim()}
@@ -334,10 +354,21 @@ const Home = () => {
               )}
             </div>
 
+            <StatusStrip
+              active={activeStatus}
+              onSelect={(s) => {
+                setActiveStatus(s);
+                if (s) setSearchTerm("");
+              }}
+            />
+
             <GenreStrip
               genres={derivedGenres}
               active={activeGenre}
-              onSelect={(g) => setSearchTerm(g ?? "")}
+              onSelect={(g) => {
+                setSearchTerm(g ?? "");
+                setActiveStatus(null);
+              }}
             />
           </div>
 
