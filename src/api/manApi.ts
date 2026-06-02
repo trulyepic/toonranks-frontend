@@ -1018,15 +1018,20 @@ export const fetchRankedSeries = async (): Promise<RankedSeries[]> => {
 export const fetchRankedSeriesPaginated = async (
   page: number,
   size: number,
-  type?: string,
-  signal?: AbortSignal,
-  status?: string
+  opts: {
+    type?: string;
+    genre?: string;
+    status?: string;
+    signal?: AbortSignal;
+  } = {}
 ): Promise<RankedSeries[]> => {
+  const { type, genre, status, signal } = opts;
   const res = await api.get<RankedSeries[]>("/series/rankings", {
     params: {
       page,
       page_size: size,
       ...(type ? { type } : {}),
+      ...(genre ? { genre } : {}),
       ...(status ? { status } : {}),
     },
     signal, // Axios v1 supports AbortController signals
