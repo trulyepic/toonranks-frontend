@@ -9,11 +9,13 @@ import {
   type RankedSeries,
   type ReadingList,
   type Series,
+  type SeriesStatus,
 } from "../api/manApi";
 import { isRequestCanceled } from "../api/client";
 import CompareManager from "../components/CompareManager";
 import EditSeriesModal from "../components/EditSeriesModal";
 import GenreStrip from "../components/GenreStrip";
+import StatusStrip from "../components/StatusStrip";
 import InfiniteScroll from "react-infinite-scroll-component";
 import ManCard from "../components/ManCard";
 import ReadingListModal from "../components/ReadingListModal";
@@ -31,13 +33,16 @@ const PAGE_SIZE = 25;
 
 const FilteredSeriesPage = () => {
   const { seriesType } = useParams();
-  const { searchTerm, setSearchTerm } = useSearch();
+  const { searchTerm } = useSearch();
 
   const [items, setItems] = useState<RankedSeries[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [editItem, setEditItem] = useState<Series | null>(null);
+  const [activeStatus, setActiveStatus] = useState<SeriesStatus>(null);
+  const [activeGenre, setActiveGenre] = useState<string | null>(null);
+  const [allGenres, setAllGenres] = useState<string[]>([]);
   const controllerRef = useRef<AbortController | null>(null);
 
   const { user } = useUser();
@@ -62,11 +67,6 @@ const FilteredSeriesPage = () => {
     []
   );
 
-  const activeGenre = useMemo(() => {
-    const value = searchTerm.trim();
-    return value ? normalizeGenre(value) : null;
-  }, [searchTerm, normalizeGenre]);
-
   const derivedGenres = useMemo(() => {
     const set = new Set<string>();
 
@@ -79,10 +79,25 @@ const FilteredSeriesPage = () => {
         .forEach((entry) => set.add(entry));
     }
 
-    if (activeGenre) set.add(activeGenre);
+    return Array.from(set);
+  }, [items, normalizeGenre]);
 
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [items, activeGenre, normalizeGenre]);
+  // Accumulate genres so the strip never collapses when a filter narrows results.
+  useEffect(() => {
+    setAllGenres((prev) => {
+      const merged = new Set(prev);
+      let changed = false;
+      for (const g of derivedGenres) {
+        if (!merged.has(g)) {
+          merged.add(g);
+          changed = true;
+        }
+      }
+      return changed
+        ? Array.from(merged).sort((a, b) => a.localeCompare(b))
+        : prev;
+    });
+  }, [derivedGenres]);
 
   useEffect(() => {
     let ignore = false;
@@ -133,61 +148,75 @@ const FilteredSeriesPage = () => {
     }
   };
 
-  const loadSeries = useCallback(async (pageToLoad: number) => {
-    if (!seriesType || !hasMore) return;
-    setLoading(true);
+  const loadSeries = useCallback(
+    async (pageToLoad: number) => {
+      if (!seriesType || !hasMore) return;
+      setLoading(true);
 
-    controllerRef.current?.abort();
-    controllerRef.current = new AbortController();
+      controllerRef.current?.abort();
+      controllerRef.current = new AbortController();
 
-    try {
-      const all = await fetchRankedSeriesPaginated(
-        pageToLoad,
-        PAGE_SIZE,
-        seriesType.toUpperCase(),
-        controllerRef.current.signal
-      );
+      try {
+        const all = await fetchRankedSeriesPaginated(pageToLoad, PAGE_SIZE, {
+          type: seriesType.toUpperCase(),
+          genre: activeGenre ?? undefined,
+          status: activeStatus ?? undefined,
+          signal: controllerRef.current.signal,
+        });
 
-      setItems((prev) => {
-        const existingIds = new Set(prev.map((item) => item.id));
-        const unique = all.filter((item) => !existingIds.has(item.id));
-        return [...prev, ...unique];
-      });
+        setItems((prev) => {
+          const existingIds = new Set(prev.map((item) => item.id));
+          const unique = all.filter((item) => !existingIds.has(item.id));
+          return [...prev, ...unique];
+        });
 
-      if (all.length < PAGE_SIZE) setHasMore(false);
-    } catch (err: unknown) {
-      if (!isRequestCanceled(err)) {
-        console.error("Failed to fetch series:", err);
-        alert("Failed to load series");
+        if (all.length < PAGE_SIZE) setHasMore(false);
+      } catch (err: unknown) {
+        if (!isRequestCanceled(err)) {
+          console.error("Failed to fetch series:", err);
+          alert("Failed to load series");
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [hasMore, seriesType]);
+    },
+    [hasMore, seriesType, activeGenre, activeStatus]
+  );
 
+  // Reset + load page 1 whenever the type, search term, or genre/status filters
+  // change. Text search uses the search endpoint (then narrows to the page type
+  // client-side); otherwise type + genre + status compose server-side.
   useEffect(() => {
     if (!seriesType) return;
 
     controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
     setItems([]);
     setPage(1);
     setHasMore(true);
 
-    const controller = new AbortController();
-    controllerRef.current = controller;
-
-    const loadInitial = async () => {
+    const run = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const all = await fetchRankedSeriesPaginated(
-          1,
-          PAGE_SIZE,
-          seriesType.toUpperCase(),
-          controller.signal
-        );
-        setItems(all);
-        setPage(1);
-        if (all.length < PAGE_SIZE) setHasMore(false);
+        if (searchTerm.trim()) {
+          const all = await searchSeries(searchTerm.trim());
+          const filtered = all.filter(
+            (item) => item.type.toUpperCase() === seriesType.toUpperCase()
+          );
+          setItems(filtered);
+          setHasMore(false);
+        } else {
+          const all = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
+            type: seriesType.toUpperCase(),
+            genre: activeGenre ?? undefined,
+            status: activeStatus ?? undefined,
+            signal: controller.signal,
+          });
+          setItems(all);
+          if (all.length < PAGE_SIZE) setHasMore(false);
+        }
       } catch (err: unknown) {
         if (!isRequestCanceled(err)) {
           console.error("Failed to fetch series:", err);
@@ -198,64 +227,9 @@ const FilteredSeriesPage = () => {
       }
     };
 
-    loadInitial();
+    run();
     return () => controller.abort();
-  }, [seriesType]);
-
-  useEffect(() => {
-    if (!seriesType) return;
-
-    const controller = new AbortController();
-    controllerRef.current?.abort();
-    controllerRef.current = controller;
-
-    const fetchSearch = async () => {
-      try {
-        setLoading(true);
-        const all = await searchSeries(searchTerm.trim());
-        const filtered = all.filter(
-          (item) => item.type.toUpperCase() === seriesType.toUpperCase()
-        );
-        setItems(filtered);
-        setHasMore(false);
-      } catch (err) {
-        if (!isRequestCanceled(err)) {
-          console.error("Search failed:", err);
-          alert("Failed to load series");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const resetToDefault = async () => {
-      setItems([]);
-      setPage(1);
-      setHasMore(true);
-      try {
-        const all = await fetchRankedSeriesPaginated(
-          1,
-          PAGE_SIZE,
-          seriesType.toUpperCase(),
-          controller.signal
-        );
-        setItems(all);
-        if (all.length < PAGE_SIZE) setHasMore(false);
-      } catch (err: unknown) {
-        if (!isRequestCanceled(err)) {
-          console.error("Failed to fetch series:", err);
-          alert("Failed to load series");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (searchTerm.trim()) fetchSearch();
-    else resetToDefault();
-
-    return () => controller.abort();
-  }, [searchTerm, seriesType]);
+  }, [seriesType, searchTerm, activeGenre, activeStatus]);
 
   useEffect(() => {
     if (!searchTerm.trim() && page > 1) loadSeries(page);
@@ -303,6 +277,11 @@ const FilteredSeriesPage = () => {
                   {activeGenre}
                 </span>
               ) : null}
+              {activeStatus ? (
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:ring-[#475276] sm:px-3 sm:py-1.5 sm:text-sm">
+                  {activeStatus.replace("_", " ")}
+                </span>
+              ) : null}
               {searchTerm.trim() ? (
                 <span className="inline-flex max-w-full items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900 sm:px-3 sm:py-1.5 sm:text-sm">
                   Search: {searchTerm.trim()}
@@ -322,10 +301,12 @@ const FilteredSeriesPage = () => {
             ) : null}
           </div>
 
+          <StatusStrip active={activeStatus} onSelect={setActiveStatus} />
+
           <GenreStrip
-            genres={derivedGenres}
+            genres={allGenres}
             active={activeGenre}
-            onSelect={(genre) => setSearchTerm(genre ?? "")}
+            onSelect={setActiveGenre}
           />
         </div>
 
@@ -354,18 +335,21 @@ const FilteredSeriesPage = () => {
                 {items.length === 0 && !loading ? (
                   <div className="py-12 text-center text-gray-600 dark:text-slate-300">
                     <p className="mb-3">
-                      {activeGenre
+                      {activeGenre || activeStatus
                         ? `No ${
                             seriesType?.toUpperCase() ?? ""
-                          } titles found for "${activeGenre}".`
+                          } titles match these filters.`
                         : `No ${seriesType?.toUpperCase() ?? ""} titles found.`}
                     </p>
-                    {activeGenre ? (
+                    {activeGenre || activeStatus ? (
                       <button
-                        onClick={() => setSearchTerm("")}
+                        onClick={() => {
+                          setActiveGenre(null);
+                          setActiveStatus(null);
+                        }}
                         className="inline-flex items-center rounded-md bg-gray-200 px-4 py-2 text-gray-800 hover:bg-gray-300 dark:bg-[linear-gradient(145deg,_rgba(30,24,20,0.92),_rgba(22,18,15,0.92))] dark:text-slate-200 dark:hover:bg-[#241d19]"
                       >
-                        Clear genre filter
+                        Clear filters
                       </button>
                     ) : null}
                   </div>

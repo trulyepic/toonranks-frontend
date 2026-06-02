@@ -41,6 +41,10 @@ const Home = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [activeStatus, setActiveStatus] = useState<SeriesStatus>(null);
+  const [activeGenre, setActiveGenre] = useState<string | null>(null);
+  // Cumulative set of genres seen this session, so the genre strip never
+  // collapses when a genre/status filter narrows the loaded results.
+  const [allGenres, setAllGenres] = useState<string[]>([]);
   // const [compareList, setCompareList] = useState<RankedSeries[]>([]);
   const [compareError, setCompareError] = useState<string | null>(null);
 
@@ -51,7 +55,7 @@ const Home = () => {
   const [myLists, setMyLists] = useState<ReadingList[] | null>(null); // null=unknown, []=none
 
   // const { searchTerm } = useSearch();
-  const { searchTerm, setSearchTerm } = useSearch();
+  const { searchTerm } = useSearch();
   const { user } = useUser();
   const isAdmin = isAdminUser(user);
   const canSubmitSeries = canSubmitSeriesUser(user);
@@ -67,7 +71,7 @@ const Home = () => {
     []
   );
 
-  // Build unique, sorted genre list from currently loaded items
+  // Genres seen in the currently loaded items
   const derivedGenres = useMemo(() => {
     const set = new Set<string>();
     for (const it of items) {
@@ -79,14 +83,26 @@ const Home = () => {
         .filter(Boolean);
       pieces.forEach((p) => set.add(p));
     }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    return Array.from(set);
   }, [items, normalizeGenre]);
 
-  // Determine active genre from searchTerm if it matches one of the derived genres
-  const activeGenre =
-    derivedGenres.find(
-      (g) => g.toLowerCase() === searchTerm.trim().toLowerCase()
-    ) || null;
+  // Accumulate genres across loads so the strip only grows (and stays usable
+  // even when a genre filter narrows the result set to a single genre).
+  useEffect(() => {
+    setAllGenres((prev) => {
+      const merged = new Set(prev);
+      let changed = false;
+      for (const g of derivedGenres) {
+        if (!merged.has(g)) {
+          merged.add(g);
+          changed = true;
+        }
+      }
+      return changed
+        ? Array.from(merged).sort((a, b) => a.localeCompare(b))
+        : prev;
+    });
+  }, [derivedGenres]);
 
   // fetch lists once when user present
   useEffect(() => {
@@ -143,13 +159,10 @@ const Home = () => {
     setLoading(true);
 
     try {
-      const newItems = await fetchRankedSeriesPaginated(
-        page,
-        PAGE_SIZE,
-        undefined,
-        undefined,
-        activeStatus ?? undefined
-      );
+      const newItems = await fetchRankedSeriesPaginated(page, PAGE_SIZE, {
+        genre: activeGenre ?? undefined,
+        status: activeStatus ?? undefined,
+      });
       setItems((prev) => {
         const newIds = new Set(prev.map((item) => item.id));
         const filtered = newItems.filter((item) => !newIds.has(item.id));
@@ -162,7 +175,7 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
-  }, [hasMore, page, activeStatus]);
+  }, [hasMore, page, activeGenre, activeStatus]);
 
   useEffect(() => {
     if (compareError) {
@@ -193,6 +206,10 @@ const Home = () => {
   //   return compareList.some((item) => item.id === id);
   // };
 
+  // Reset and load page 1 whenever the search term or active filters change.
+  // Text search (from the nav bar) and the genre+status filters are separate
+  // modes: searching uses the search endpoint; otherwise genre + status compose
+  // server-side on the rankings endpoint.
   useEffect(() => {
     const fetchData = async () => {
       if (searchTerm.trim()) {
@@ -213,13 +230,10 @@ const Home = () => {
         setHasMore(true);
 
         try {
-          const results = await fetchRankedSeriesPaginated(
-            1,
-            PAGE_SIZE,
-            undefined,
-            undefined,
-            activeStatus ?? undefined
-          );
+          const results = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
+            genre: activeGenre ?? undefined,
+            status: activeStatus ?? undefined,
+          });
           setItems(results);
           if (results.length < PAGE_SIZE) setHasMore(false);
         } catch (err) {
@@ -231,7 +245,7 @@ const Home = () => {
     };
 
     fetchData();
-  }, [searchTerm, activeStatus]);
+  }, [searchTerm, activeGenre, activeStatus]);
 
   useEffect(() => {
     if (!searchTerm) loadSeries();
@@ -354,21 +368,12 @@ const Home = () => {
               )}
             </div>
 
-            <StatusStrip
-              active={activeStatus}
-              onSelect={(s) => {
-                setActiveStatus(s);
-                if (s) setSearchTerm("");
-              }}
-            />
+            <StatusStrip active={activeStatus} onSelect={setActiveStatus} />
 
             <GenreStrip
-              genres={derivedGenres}
+              genres={allGenres}
               active={activeGenre}
-              onSelect={(g) => {
-                setSearchTerm(g ?? "");
-                setActiveStatus(null);
-              }}
+              onSelect={setActiveGenre}
             />
           </div>
 
