@@ -60,29 +60,30 @@ console · ✅ = done.
 - [x] Add this runbook (`docs/UAT_ENVIRONMENT_SETUP.md`) on the `uat` branch and keep the
       checkboxes updated as we progress.
 
-### 3. Backend CORS — accept the UAT origin — ⬜ TODO **[me]**
-- [ ] Make the backend CORS allowlist env-driven: read an `EXTRA_CORS_ORIGINS` env var
-      (comma-separated) in `toonranks-backend/app/main.py` and append it to `allow_origins`.
-      (Currently the allowlist is hardcoded to localhost + `toonranks.com` / `www.toonranks.com`,
-      with `allow_credentials=True` — so `*` is not allowed and the UAT origin must be listed.)
-- [ ] After deploy, set `EXTRA_CORS_ORIGINS` to the UAT URL as a **Railway env var** (console).
-- _Note: this is a separate PR in the backend repo, not the frontend `uat` branch._
+### 3. Backend CORS — accept the UAT origin — 🟡 IN PROGRESS
 
-### 4. Amplify: connect the `uat` branch — ⬜ TODO **[console]**
-- [ ] In the existing Amplify app, **connect a new branch** = `uat`.
-- [ ] Confirm it builds with the current `amplify.yml` (same backend URL — no build change needed
-      because UAT uses the same backend).
-- [ ] Note the generated UAT URL (e.g. `https://uat.<appId>.amplifyapp.com`).
-- _(Step-by-step with screenshots to be added when we configure Amplify.)_
+- [x] **[me]** Made the CORS allowlist env-driven: `app/config.py` reads `EXTRA_CORS_ORIGINS`
+      (comma-separated) and `app/main.py` spreads it into `allow_origins`. Branch in the backend
+      repo: **`backend-cors-env-origins`** (tests pass). _Merge + redeploy this first._
+- [ ] **[console]** After step 8 (custom domain) is live, set the Railway env var on the backend
+      service: `EXTRA_CORS_ORIGINS = https://uat.toonranks.com`
+      (Railway → backend service → Variables → add → redeploy.) You can include the amplifyapp URL
+      too, comma-separated, if you want it to keep working as a fallback.
+
+### 4. Amplify: connect the `uat` branch — ✅ DONE **[console]**
+- [x] Connected the `uat` branch in the Amplify app (App ID `d44czcdkzilpz`), auto-build enabled,
+      using the existing `amplify.yml` (same backend URL).
+- [x] **UAT URL:** `https://uat.d44czcdkzilpz.amplifyapp.com` — status **Deployed**.
 
 ### 5. Google OAuth — allow the UAT domain — ⬜ TODO **[console]**
 - [ ] Google Cloud Console → APIs & Services → Credentials → the **OAuth 2.0 *web* client**.
-- [ ] Add the UAT URL to **Authorized JavaScript origins** (and redirect URIs if used).
+- [ ] Under **Authorized JavaScript origins**, add: `https://uat.toonranks.com`
+- [ ] (If the OAuth flow uses redirect URIs, add the same origin there too.)
 - _Without this, "Continue with Google" fails on UAT._
 
 ### 6. reCAPTCHA — allow the UAT domain — ⬜ TODO **[console]**
-- [ ] reCAPTCHA admin console → the site key used by the app → **add the UAT domain** to allowed
-      domains.
+- [ ] reCAPTCHA admin console → the site key `6Ld96JMrAAAAAOgkEHH4sARr5aHkCone2tYQBCXN` → **Settings
+      → Domains** → add: `uat.toonranks.com` (host only, no scheme).
 - _Without this, the login/signup captcha fails on UAT._
 
 ### 7. UAT banner in the frontend — ⬜ TODO **[me]**
@@ -91,9 +92,19 @@ console · ✅ = done.
 - [ ] Set `VITE_APP_ENV=uat` only on the UAT Amplify branch build (prod stays unset/`production`).
 - _This is a frontend change; it can live on `uat` and be merged forward._
 
-### 8. (Optional) Cloudflare custom subdomain — ⬜ TODO **[console]**
-- [ ] If you want `uat.toonranks.com` instead of the Amplify URL: add the domain in Amplify, create
-      the CNAME in Cloudflare, and set a sane cache rule (avoid serving stale builds).
+### 8. Custom subdomain `uat.toonranks.com` (do this BEFORE steps 3/5/6) — ⬜ TODO **[console]**
+
+Chosen target domain: **`uat.toonranks.com`** (the `uat.d44czcdkzilpz.amplifyapp.com` URL is just
+Amplify's auto-generated default and still works as a fallback). DNS is managed in **AWS Route 53**,
+which Amplify integrates with directly.
+
+- [ ] Amplify → **App settings → Custom domains** (a.k.a. Domain management). `toonranks.com` is
+      already attached for `main`; **edit/add a subdomain** mapping: subdomain `uat` → branch `uat`.
+- [ ] Amplify provisions an **ACM SSL cert** and the DNS records. If the `toonranks.com` hosted zone
+      is in the **same AWS account**, Amplify can create the Route 53 records automatically; confirm
+      the validation + CNAME records land in the hosted zone.
+- [ ] Wait for status **Available** (SSL can take 15 min – a few hours).
+- _Once live, use `https://uat.toonranks.com` for the CORS, Google OAuth, and reCAPTCHA entries below._
 
 ### 9. Verification — ⬜ TODO
 - [ ] UAT URL loads the app.
