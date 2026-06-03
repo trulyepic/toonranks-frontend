@@ -21,9 +21,10 @@ jobs:
   deploy-production:
     name: Release main to production (Amplify)
     runs-on: ubuntu-latest
-    # Optional approval gate: add required reviewers to a GitHub Environment
-    # named "production" (repo Settings -> Environments) to require sign-off.
-    environment: production
+    # NOTE: intentionally no `environment:` here. Using a GitHub environment
+    # changes the OIDC token subject to `…:environment:<name>`, which would not
+    # match the role's branch-ref-scoped trust policy and breaks AssumeRole.
+    # The manual dispatch + the "type deploy to confirm" guard are the gate.
 
     steps:
       - name: Require explicit confirmation
