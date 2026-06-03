@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - main
+      - uat
   push:
     branches:
       - main
+      - uat
 
 jobs:
   lint:
@@ -93,9 +95,12 @@ jobs:
         run: npm run build
 
   amplify-deployment:
-    name: Amplify deployment
+    name: Amplify deployment (UAT)
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # UAT is the auto-deploy branch under Model A. `main` no longer auto-builds
+    # (production ships via the manual "Deploy to Production" workflow), so we
+    # only wait for an Amplify deploy on pushes to `uat`.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/uat'
     needs:
       - lint
       - unit-tests
@@ -122,5 +127,5 @@ jobs:
       - name: Wait for Amplify deployment
         env:
           AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
-          AMPLIFY_BRANCH_NAME: main
+          AMPLIFY_BRANCH_NAME: uat
         run: node scripts/wait-for-amplify-deploy.mjs
