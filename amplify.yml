@@ -7,7 +7,7 @@ frontend:
         - nvm use 20
         - node -v
         - npm -v
-        - echo VITE_APP_BASE_URL=https://man-review-backend-production.up.railway.app > .env
+        - echo VITE_APP_BASE_URL=https://api.toonranks.com > .env
         - echo VITE_GOOGLE_CLIENT_ID=33290208569-l4gmljsl81r51g81irs7mdpl7rjfml1l.apps.googleusercontent.com >> .env
         - echo VITE_RECAPTCHA_SITE_KEY=6Ld96JMrAAAAAOgkEHH4sARr5aHkCone2tYQBCXN >> .env
     build:
