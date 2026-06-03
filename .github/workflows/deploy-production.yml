@@ -1,0 +1,83 @@
+name: Deploy to Production
+
+# Manual, gated production release. Merges to `main` do NOT auto-deploy prod
+# (auto-build is disabled on the Amplify `main` branch); instead, a maintainer
+# triggers this workflow to release the current `main` to production
+# (https://toonranks.com). UAT (https://uat.toonranks.com) continues to
+# auto-deploy from the `uat` branch.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm a production release'
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-production:
+    name: Release main to production (Amplify)
+    runs-on: ubuntu-latest
+    # Optional approval gate: add required reviewers to a GitHub Environment
+    # named "production" (repo Settings -> Environments) to require sign-off.
+    environment: production
+
+    steps:
+      - name: Require explicit confirmation
+        if: ${{ inputs.confirm != 'deploy' }}
+        run: |
+          echo "::error::You must type 'deploy' in the confirm box to release to production."
+          exit 1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Start Amplify production build (main branch)
+        id: start
+        env:
+          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
+        run: |
+          JOB_ID=$(aws amplify start-job \
+            --app-id "$AMPLIFY_APP_ID" \
+            --branch-name main \
+            --job-type RELEASE \
+            --query 'jobSummary.jobId' --output text)
+          echo "Started Amplify production job: $JOB_ID"
+          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the Amplify job to finish
+        env:
+          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
+          JOB_ID: ${{ steps.start.outputs.job_id }}
+        run: |
+          echo "Polling Amplify job $JOB_ID on branch main..."
+          for i in $(seq 1 90); do
+            STATUS=$(aws amplify get-job \
+              --app-id "$AMPLIFY_APP_ID" \
+              --branch-name main \
+              --job-id "$JOB_ID" \
+              --query 'job.summary.status' --output text)
+            echo "[$i] status=$STATUS"
+            case "$STATUS" in
+              SUCCEED)
+                echo "✅ Production deploy succeeded."
+                exit 0
+                ;;
+              FAILED|CANCELLED)
+                echo "::error::Production deploy ended with status $STATUS."
+                exit 1
+                ;;
+            esac
+            sleep 20
+          done
+          echo "::error::Timed out waiting for Amplify job $JOB_ID."
+          exit 1
