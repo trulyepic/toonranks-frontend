@@ -40,6 +40,18 @@ until you promote.
    - Type **`deploy`** in the confirm box → **Run**.
    - The workflow assumes the AWS role, runs an Amplify `RELEASE` build of the
      `main` branch, and polls until it succeeds or fails.
+5. **Sync `uat` back from `main`:** after the PR in step 3 merges, GitHub creates
+   a new merge commit on `main` that does not exist on `uat`. This causes `uat` to
+   show "X commits ahead of main" even though the code is identical. Fix it by
+   merging `main` back into `uat`:
+   ```bash
+   git checkout uat
+   git pull origin uat
+   git merge origin/main
+   git push origin uat
+   ```
+   Or open a quick **`main → uat`** PR on GitHub. Either way, `uat` should read
+   "This branch is even with main" after this step.
 
 ## How it's wired
 
@@ -56,6 +68,12 @@ until you promote.
   `main` (which no longer auto-deploys).
 
 ## Gotchas (things that have bitten us)
+
+- **`uat` always shows "X commits ahead of main" after a release.** This is normal
+  Git behaviour — the `uat → main` PR creates a new merge commit on `main` that
+  isn't on `uat`. Always run step 5 above (back-merge `main → uat`) after every
+  release to keep the branches even. It's cosmetic if you skip it, but it can cause
+  confusing diffs on the next `uat → main` PR.
 
 - **Run "Deploy to Production" from `main` only.** The role's trust policy allows
   the subject `repo:trulyepic/toonranks-frontend:ref:refs/heads/main`. A
