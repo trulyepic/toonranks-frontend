@@ -2,6 +2,10 @@
 
 AI coding assistant entry point. Read this before touching any code.
 
+> ⚠️ **Read `CONSTRAINTS.md` first.** It defines the non-negotiable workflow rules:
+> never commit/push without explicit instruction, always end every task with UI test
+> steps + a commit message + a PR description, one branch per task.
+
 ---
 
 ## What this project is
@@ -102,10 +106,13 @@ All env vars must start with `VITE_` to be available in the browser bundle.
 
 ## Critical rules — read before writing any code
 
-1. **Never work directly on `main` or `uat`.** Create a feature branch, merge to `uat` first, then promote to `main` for production. See `docs/DEPLOYMENT.md`.
-2. **Never commit or push** unless the user explicitly asks.
-3. **All API calls go through `src/api/manApi.ts`** — never use raw `fetch` or create a second axios instance. Add new API functions to `manApi.ts`.
-4. **Auth state lives in `UserContext`** (`src/login/UserContext.tsx`). Read it with `useContext(UserContext)`. Never read `localStorage` directly for the user object in components.
+> Full workflow constraints are in `CONSTRAINTS.md`. The short version:
+
+1. **Never commit or push without explicit instruction from the owner.** Finishing a task does not mean you commit. Wait to be told.
+2. **Always end every task with:** numbered UI test steps, a one-line commit message, and a short GitHub PR description. No exceptions.
+3. **Never work directly on `main` or `uat`.** Create a feature branch, merge to `uat` first, then promote to `main` for production. See `docs/DEPLOYMENT.md`.
+4. **All API calls go through `src/api/manApi.ts`** — never use raw `fetch` or create a second axios instance. Add new API functions to `manApi.ts`.
+5. **Auth state lives in `UserContext`** (`src/login/UserContext.tsx`). Read it with `useContext(UserContext)`. Never read `localStorage` directly for the user object in components.
 5. **JWT is in `localStorage`** under key `"token"`. The axios interceptor in `client.ts` attaches it automatically. Don't add auth headers manually.
 6. **Role checks use `src/util/roleUtils.ts`** — `isAdminUser(user)`, `canSubmitSeriesUser(user)`. Never compare role strings inline.
 7. **Theme is `light` | `dark`**, controlled by `ThemeContext`. Tailwind `dark:` classes respond to the `dark` class on `<html>`. Never hardcode dark/light colours outside Tailwind classes.

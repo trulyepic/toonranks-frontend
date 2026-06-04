@@ -34,6 +34,10 @@ e2e/                  Playwright tests
 
 ## Non-negotiable rules
 
+> See `CONSTRAINTS.md` for the full workflow. Key points repeated here:
+
+- **Never commit or push without explicit instruction** — wait to be told; finishing a task does not mean commit
+- **Always end every task with** numbered UI test steps + one-line commit message + short PR description
 - **Never work on `main` or `uat` directly** — feature branches only, merge to `uat` first
 - **All API calls go through `src/api/manApi.ts`** — never raw fetch, never a second axios instance
 - **Auth state from `UserContext`** — never read localStorage for user in components
