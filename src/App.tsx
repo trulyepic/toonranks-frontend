@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Header from "./components/Header";
+import CookieBanner from "./components/CookieBanner";
 import Home from "./pages/Home";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -108,6 +109,7 @@ function App() {
             </>
           </main>
           <Footer />
+          <CookieBanner />
         </div>
       </Router>
     </SearchProvider>

@@ -64,8 +64,19 @@
       function gtag() {
         dataLayer.push(arguments);
       }
-      gtag("js", new Date());
 
+      // Google Consent Mode v2 — default denied until user accepts via
+      // CookieBanner. The banner calls gtag("consent","update",...) on choice
+      // and re-applies the saved choice on every subsequent page load.
+      gtag("consent", "default", {
+        analytics_storage: "denied",
+        ad_storage: "denied",
+        ad_user_data: "denied",
+        ad_personalization: "denied",
+        wait_for_update: 500,
+      });
+
+      gtag("js", new Date());
       gtag("config", "AW-948761939");
     </script>
 
