@@ -5,6 +5,9 @@ React 18 + TypeScript SPA. Vite build tool. Tailwind CSS (dark mode: class). Rea
 Deployed on AWS Amplify. Backend is a separate FastAPI repo (toonranks-backend).
 
 ## Hard rules
+- **Read CONSTRAINTS.md** — it defines the full workflow and handoff requirements
+- Never commit or push without explicit instruction from the owner
+- Always end every task with: numbered UI test steps + one-line commit message + short PR description
 - Never commit directly to `main` or `uat` — feature branches only, merge to `uat` first
 - All API calls go through `src/api/manApi.ts` using the axios instance from `src/api/client.ts`
 - Auth state lives in `UserContext` (src/login/) — never read localStorage for user in components
