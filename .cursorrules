@@ -1,0 +1,48 @@
+# Toon Ranks Frontend — Cursor Rules
+
+## Project identity
+React 18 + TypeScript SPA. Vite build tool. Tailwind CSS (dark mode: class). React Router v6.
+Deployed on AWS Amplify. Backend is a separate FastAPI repo (toonranks-backend).
+
+## Hard rules
+- Never commit directly to `main` or `uat` — feature branches only, merge to `uat` first
+- All API calls go through `src/api/manApi.ts` using the axios instance from `src/api/client.ts`
+- Auth state lives in `UserContext` (src/login/) — never read localStorage for user in components
+- Role checks use `src/util/roleUtils.ts` — never compare role strings inline
+- New routes must be added to `src/App.tsx` — the single routing source of truth
+- No `any` types without an explanatory comment
+- Run `npm run lint` and `npm run build` to verify before finishing
+
+## Styling rules
+- Tailwind CSS only — no inline styles, no CSS modules for new code
+- Dark mode via `dark:` prefix — relies on `dark` class on `<html>` set by ThemeContext
+- Don't hardcode colour values — use Tailwind palette classes
+
+## Key patterns
+- New page → `src/pages/MyPage.tsx` + route entry in `App.tsx`
+- New shared component → `src/components/MyComponent.tsx`
+- New API call → typed function in `src/api/manApi.ts`
+- New pure helper → `src/util/myUtil.ts`
+- Loading states → use ShimmerBox / ShimmerLoader components, not spinners
+- Toasts → react-hot-toast (`toast.success(...)`, `toast.error(...)`)
+- Public pages → include `<Seo>` component for meta tags
+
+## Domain vocabulary
+- Series types: MANGA, MANHWA, MANHUA
+- User roles: GENERAL < CONTRIBUTOR < ADMIN
+- Approval states (backend-driven): DRAFT → PENDING → APPROVED
+- Theme: "light" | "dark" — from ThemeContext
+
+## Key reference files
+- Architecture: docs/ARCHITECTURE.md
+- Conventions: docs/CONVENTIONS.md
+- Deployment: docs/DEPLOYMENT.md
+- All types: src/types/types.ts
+- All API functions: src/api/manApi.ts
+
+## What to avoid
+- Raw fetch() calls for API requests
+- Hardcoding VITE_APP_BASE_URL — use import.meta.env
+- Storing anything beyond token/user in localStorage
+- Inline styles
+- Committing to main or uat directly
