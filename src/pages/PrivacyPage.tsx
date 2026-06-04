@@ -36,7 +36,7 @@ export default function PrivacyPage() {
         Privacy Policy
       </h1>
       <p className={`mt-3 text-sm ${infoPageSubtleText}`}>
-        Last updated: May 14, 2026
+        Last updated: June 4, 2026
       </p>
 
       <div className={`mt-8 space-y-8 ${infoPageBodyText}`}>
@@ -107,6 +107,67 @@ export default function PrivacyPage() {
             We use information to operate accounts, verify email addresses,
             maintain rankings, display community content, troubleshoot issues,
             prevent abuse, improve the product, and communicate when needed.
+          </p>
+        </section>
+
+        <section className={sectionClass}>
+          <h2 className={`text-xl font-semibold ${infoPageHeadingText}`}>
+            Cookies
+          </h2>
+          <p>
+            We use cookies and similar technologies to operate the site and
+            improve your experience. The categories we use are:
+          </p>
+          <ul className="list-disc pl-5 space-y-1 mt-2">
+            <li>
+              <strong>Necessary</strong> — required for authentication, security,
+              and core site features. These cannot be disabled.
+            </li>
+            <li>
+              <strong>Analytics</strong> — help us understand how visitors use
+              the site (Google Analytics / gtag). Only active after you accept
+              analytics cookies.
+            </li>
+            <li>
+              <strong>Advertising</strong> — used to serve relevant ads and
+              measure ad performance (Google AdSense). Only active after you
+              accept advertising cookies.
+            </li>
+          </ul>
+          <p className="mt-2">
+            You can manage your cookie preferences at any time via the cookie
+            banner at the bottom of the page.
+          </p>
+        </section>
+
+        <section className={sectionClass}>
+          <h2 className={`text-xl font-semibold ${infoPageHeadingText}`}>
+            Advertising
+          </h2>
+          <p>
+            {SITE_NAME} may display ads served by Google AdSense. Google uses
+            cookies to serve ads based on your prior visits to this site and
+            other sites on the internet. You can opt out of personalised
+            advertising by visiting{" "}
+            <a
+              href="https://www.google.com/settings/ads"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline dark:text-blue-300"
+            >
+              Google Ad Settings
+            </a>
+            . For more information on how Google uses data from sites that use
+            its advertising services, see{" "}
+            <a
+              href="https://policies.google.com/technologies/ads"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline dark:text-blue-300"
+            >
+              Google's advertising policies
+            </a>
+            .
           </p>
         </section>
 
