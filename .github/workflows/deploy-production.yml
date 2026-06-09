@@ -82,3 +82,25 @@ jobs:
           done
           echo "::error::Timed out waiting for Amplify job $JOB_ID."
           exit 1
+
+      # Amplify/CloudFront now has the new files, but Cloudflare (the authoritative
+      # proxy in front of the site) may still serve the previous build. Purge it so
+      # visitors — and Googlebot — immediately get the new deploy. This automates
+      # the recurring "blank screen / stale 404s after deploy" fix.
+      - name: Purge Cloudflare cache
+        env:
+          CF_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          echo "Purging Cloudflare cache for zone $CF_ZONE_ID..."
+          RESPONSE=$(curl -s -X POST \
+            "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
+            -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}')
+          echo "$RESPONSE"
+          if [ "$(echo "$RESPONSE" | jq -r '.success')" != "true" ]; then
+            echo "::error::Cloudflare cache purge failed."
+            exit 1
+          fi
+          echo "✅ Cloudflare cache purged."
