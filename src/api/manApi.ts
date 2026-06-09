@@ -1041,11 +1041,18 @@ export const fetchRankedSeriesPaginated = async (
 
 export const searchSeries = async (
   query: string,
-  signal?: AbortSignal
+  opts: { type?: string; signal?: AbortSignal } = {}
 ): Promise<RankedSeries[]> => {
+  const { type, signal } = opts;
+  // When `type` is provided the backend scopes both the search results AND the
+  // rank calculation to that type, so each result keeps its true rank within
+  // that category. Without `type`, ranks reflect the full "All" ranking.
   const res = await api.get<RankedSeries[]>("/series/search", {
-    params: { query },
-    signal, // <-- now cancellable
+    params: {
+      query,
+      ...(type ? { type } : {}),
+    },
+    signal, // cancellable
   });
   return res.data;
 };

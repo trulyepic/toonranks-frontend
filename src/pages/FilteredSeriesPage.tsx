@@ -201,11 +201,13 @@ const FilteredSeriesPage = () => {
       setLoading(true);
       try {
         if (searchTerm.trim()) {
-          const all = await searchSeries(searchTerm.trim());
-          const filtered = all.filter(
-            (item) => item.type.toUpperCase() === seriesType.toUpperCase()
-          );
-          setItems(filtered);
+          // Pass the page's type so the backend scopes both results AND rank to
+          // this category — each result keeps its true rank within the type,
+          // instead of being re-ranked among the search matches.
+          const all = await searchSeries(searchTerm.trim(), {
+            type: seriesType.toUpperCase(),
+          });
+          setItems(all);
           setHasMore(false);
         } else {
           const all = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {

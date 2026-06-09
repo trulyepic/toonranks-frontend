@@ -41,7 +41,9 @@ export function FavouriteSearchModal({ open, pinned, onSelect, onClose }: Props)
       abortRef.current = controller;
       setLoading(true);
       try {
-        const data = await searchSeries(query.trim(), controller.signal);
+        const data = await searchSeries(query.trim(), {
+          signal: controller.signal,
+        });
         setResults(data.slice(0, 12));
       } catch {
         // cancelled or error — don't clear results
