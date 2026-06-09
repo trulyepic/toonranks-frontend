@@ -40,29 +40,34 @@ Backend `/series/rankings` already accepts `type`, `genre`, `status`.
 
 ---
 
-## Phase 1 — frontend only (high value, no backend change)
+## Design decision (revised)
 
-Branch: `frontend-rankings-filters` (separate from this discovery branch)
+**Type is NOT a filter on the page.** The global header already owns Type via its
+category dropdown (`ALL / Manga / Manhwa / Manhua → /type/<TYPE>`). Adding a Type row
+to the page only duplicates it and makes the top busier. Type = primary navigation
+(header); Status / Genre / Sort = secondary refinement within the chosen type (page).
 
-- [ ] Add a **Type** filter row to `Home.tsx` (All / Manga / Manhwa / Manhua),
-      wired to `fetchRankedSeriesPaginated`'s existing `type` option + the search path.
-- [ ] Add small dimension **labels** (`Type` / `Status` / `Genre`) to the filter bar
-      on both `Home.tsx` and `FilteredSeriesPage.tsx`.
-- [ ] Make active-filter chips **removable** (✕ clears that one dimension) and add a
-      **"Clear all"** action. Replace the current display-only chips.
-- [ ] De-duplicate the "ALL" vs "ALL STATUS" confusion now that dimensions are labeled.
-- [ ] Consider extracting the shared filter bar (Home + FilteredSeriesPage duplicate it)
-      into a single `RankingsFilterBar` component to avoid drift.
-- [ ] Verify the `/type/:seriesType` page and the new Home Type filter stay in sync
-      (selecting a Type on Home should match what `/type/` shows).
+So the redesign **consolidates the two stacked full-width strips (Status + Genre) into
+one compact toolbar row** of labeled dropdowns, and adds Sort:
 
-## Phase 2 — sort (small backend + frontend)
+```
+Rankings · 48 loaded                              + List   + Add
+[Genre ▾]  [Status ▾]  [Sort ▾]   | ✕ Action  ✕ Ongoing   Clear all
+```
 
-Backend branch: `backend-rankings-sort` · Frontend follows on a filters branch
+## Phase 1 + 2 (built together)
 
-- [ ] Backend: add `sort` query param to `/series/rankings`
-      (`score` default | `votes` | `newest` | `title`). Mirror the existing forum
-      pattern (`sort=activity|newest|replies` on the forum list endpoint).
+Frontend branch: `frontend-rankings-toolbar` · Backend branch: `backend-rankings-sort`
+
+- [x] `FilterSelect` — generic compact labeled dropdown (outside-click + Esc close).
+- [x] `RankingsToolbar` — shared toolbar (Genre ▾ / Status ▾ / Sort ▾) + removable
+      active chips + "Clear all" + page-specific `rightSlot`. Used by both `Home.tsx`
+      and `FilteredSeriesPage.tsx` (no duplicated filter chrome).
+- [x] Two stacked strips collapsed into one row → less vertical chrome, covers rise up.
+- [x] **Sort** dropdown: Score (default) / Most Voted / Newest / A–Z.
+- [x] Backend: `sort` param on `/series/rankings` (`score` | `votes` | `newest` |
+      `title`). Display order only — each item keeps its score-based `rank`.
+- [x] Removed the scrapped Type-strip approach (header owns Type).
 - [ ] Frontend: add a **Sort** dropdown to the filter bar; thread `sort` through
       `fetchRankedSeriesPaginated`.
 - [ ] Decide newest ordering source (series `id` desc is a cheap proxy if there's no
