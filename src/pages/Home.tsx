@@ -19,8 +19,7 @@ import { Helmet } from "react-helmet";
 import CompareManager from "../components/CompareManager";
 import { useUser } from "../login/useUser";
 import ReadingListModal from "../components/ReadingListModal";
-import GenreStrip from "../components/GenreStrip";
-import StatusStrip from "../components/StatusStrip";
+import RankingsToolbar, { type SortValue } from "../components/RankingsToolbar";
 import { canSubmitSeriesUser, isAdminUser } from "../util/roleUtils";
 import {
   absoluteUrl,
@@ -42,6 +41,7 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [activeStatus, setActiveStatus] = useState<SeriesStatus>(null);
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortValue>("score");
   // Cumulative set of genres seen this session, so the genre strip never
   // collapses when a genre/status filter narrows the loaded results.
   const [allGenres, setAllGenres] = useState<string[]>([]);
@@ -162,6 +162,7 @@ const Home = () => {
       const newItems = await fetchRankedSeriesPaginated(page, PAGE_SIZE, {
         genre: activeGenre ?? undefined,
         status: activeStatus ?? undefined,
+        sort: sortBy,
       });
       setItems((prev) => {
         const newIds = new Set(prev.map((item) => item.id));
@@ -175,7 +176,7 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
-  }, [hasMore, page, activeGenre, activeStatus]);
+  }, [hasMore, page, activeGenre, activeStatus, sortBy]);
 
   useEffect(() => {
     if (compareError) {
@@ -233,6 +234,7 @@ const Home = () => {
           const results = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
             genre: activeGenre ?? undefined,
             status: activeStatus ?? undefined,
+            sort: sortBy,
           });
           setItems(results);
           if (results.length < PAGE_SIZE) setHasMore(false);
@@ -245,7 +247,7 @@ const Home = () => {
     };
 
     fetchData();
-  }, [searchTerm, activeGenre, activeStatus]);
+  }, [searchTerm, activeGenre, activeStatus, sortBy]);
 
   useEffect(() => {
     if (!searchTerm) loadSeries();
@@ -320,33 +322,19 @@ const Home = () => {
 
       <div className="mx-auto w-full max-w-7xl px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">
-          <div className="flex flex-col gap-4 border-b border-slate-200/80 px-3.5 py-4 dark:border-[#342a23] sm:gap-5 sm:px-6 sm:py-6">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 ring-1 ring-inset ring-slate-200 dark-theme-chip dark:text-slate-400 sm:px-3 sm:py-1.5 sm:text-xs sm:tracking-[0.18em]">
-                  Rankings
-                </span>
-                <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-200 dark-theme-chip dark:text-slate-300 sm:px-3 sm:py-1.5 sm:text-sm">
-                  {items.length} loaded
-                </span>
-                {activeGenre ? (
-                  <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:ring-[#475276] sm:px-3 sm:py-1.5 sm:text-sm">
-                    {activeGenre}
-                  </span>
-                ) : null}
-                {activeStatus ? (
-                  <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:ring-[#475276] sm:px-3 sm:py-1.5 sm:text-sm">
-                    {activeStatus.replace("_", " ")}
-                  </span>
-                ) : null}
-                {searchTerm.trim() ? (
-                  <span className="inline-flex max-w-full items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900 sm:px-3 sm:py-1.5 sm:text-sm">
-                    Search: {searchTerm.trim()}
-                  </span>
-                ) : null}
-              </div>
-
-              {(canSubmitSeries || canCreateMoreLists) && (
+          <RankingsToolbar
+            contextLabel="Rankings"
+            loadedCount={items.length}
+            activeStatus={activeStatus}
+            activeGenre={activeGenre}
+            genres={allGenres}
+            sort={sortBy}
+            searchTerm={searchTerm}
+            onSelectStatus={setActiveStatus}
+            onSelectGenre={setActiveGenre}
+            onSelectSort={setSortBy}
+            rightSlot={
+              canSubmitSeries || canCreateMoreLists ? (
                 <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                   {canCreateMoreLists && (
                     <button
@@ -365,17 +353,9 @@ const Home = () => {
                     </button>
                   )}
                 </div>
-              )}
-            </div>
-
-            <StatusStrip active={activeStatus} onSelect={setActiveStatus} />
-
-            <GenreStrip
-              genres={allGenres}
-              active={activeGenre}
-              onSelect={setActiveGenre}
-            />
-          </div>
+              ) : null
+            }
+          />
 
           <div className="px-3.5 py-6 sm:px-6 sm:py-8">
           {/* {isAdmin && (

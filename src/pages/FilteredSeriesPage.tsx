@@ -14,8 +14,7 @@ import {
 import { isRequestCanceled } from "../api/client";
 import CompareManager from "../components/CompareManager";
 import EditSeriesModal from "../components/EditSeriesModal";
-import GenreStrip from "../components/GenreStrip";
-import StatusStrip from "../components/StatusStrip";
+import RankingsToolbar, { type SortValue } from "../components/RankingsToolbar";
 import InfiniteScroll from "react-infinite-scroll-component";
 import ManCard from "../components/ManCard";
 import ReadingListModal from "../components/ReadingListModal";
@@ -42,6 +41,7 @@ const FilteredSeriesPage = () => {
   const [editItem, setEditItem] = useState<Series | null>(null);
   const [activeStatus, setActiveStatus] = useState<SeriesStatus>(null);
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortValue>("score");
   const [allGenres, setAllGenres] = useState<string[]>([]);
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -161,6 +161,7 @@ const FilteredSeriesPage = () => {
           type: seriesType.toUpperCase(),
           genre: activeGenre ?? undefined,
           status: activeStatus ?? undefined,
+          sort: sortBy,
           signal: controllerRef.current.signal,
         });
 
@@ -180,7 +181,7 @@ const FilteredSeriesPage = () => {
         setLoading(false);
       }
     },
-    [hasMore, seriesType, activeGenre, activeStatus]
+    [hasMore, seriesType, activeGenre, activeStatus, sortBy]
   );
 
   // Reset + load page 1 whenever the type, search term, or genre/status filters
@@ -214,6 +215,7 @@ const FilteredSeriesPage = () => {
             type: seriesType.toUpperCase(),
             genre: activeGenre ?? undefined,
             status: activeStatus ?? undefined,
+            sort: sortBy,
             signal: controller.signal,
           });
           setItems(all);
@@ -231,7 +233,7 @@ const FilteredSeriesPage = () => {
 
     run();
     return () => controller.abort();
-  }, [seriesType, searchTerm, activeGenre, activeStatus]);
+  }, [seriesType, searchTerm, activeGenre, activeStatus, sortBy]);
 
   useEffect(() => {
     if (!searchTerm.trim() && page > 1) loadSeries(page);
@@ -265,52 +267,30 @@ const FilteredSeriesPage = () => {
         <meta name="twitter:image" content={DEFAULT_SOCIAL_IMAGE} />
       </Helmet>
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">
-        <div className="flex flex-col gap-4 border-b border-slate-200/80 px-3.5 py-4 dark:border-[#342a23] sm:gap-5 sm:px-6 sm:py-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 ring-1 ring-inset ring-slate-200 dark-theme-chip dark:text-slate-400 sm:px-3 sm:py-1.5 sm:text-xs sm:tracking-[0.18em]">
-                {seriesType?.toUpperCase()}
-              </span>
-              <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-200 dark-theme-chip dark:text-slate-300 sm:px-3 sm:py-1.5 sm:text-sm">
-                {items.length} loaded
-              </span>
-              {activeGenre ? (
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:ring-[#475276] sm:px-3 sm:py-1.5 sm:text-sm">
-                  {activeGenre}
-                </span>
-              ) : null}
-              {activeStatus ? (
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:ring-[#475276] sm:px-3 sm:py-1.5 sm:text-sm">
-                  {activeStatus.replace("_", " ")}
-                </span>
-              ) : null}
-              {searchTerm.trim() ? (
-                <span className="inline-flex max-w-full items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900 sm:px-3 sm:py-1.5 sm:text-sm">
-                  Search: {searchTerm.trim()}
-                </span>
-              ) : null}
-            </div>
-
-            {canCreateMoreLists ? (
+        <RankingsToolbar
+          contextLabel={seriesType?.toUpperCase() ?? "Rankings"}
+          loadedCount={items.length}
+          activeStatus={activeStatus}
+          activeGenre={activeGenre}
+          genres={allGenres}
+          sort={sortBy}
+          searchTerm={searchTerm}
+          onSelectStatus={setActiveStatus}
+          onSelectGenre={setActiveGenre}
+          onSelectSort={setSortBy}
+          rightSlot={
+            canCreateMoreLists ? (
               <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                 <button
                   onClick={openCreateListOnly}
-                      className="w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-800 shadow-sm transition hover:bg-blue-100 dark:border-[#475276] dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:hover:bg-[linear-gradient(145deg,_rgba(43,58,101,0.86),_rgba(29,38,67,0.86))] sm:w-auto"
+                  className="w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-medium text-blue-800 shadow-sm transition hover:bg-blue-100 dark:border-[#475276] dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:hover:bg-[linear-gradient(145deg,_rgba(43,58,101,0.86),_rgba(29,38,67,0.86))] sm:w-auto"
                 >
                   + Create Reading List
                 </button>
               </div>
-            ) : null}
-          </div>
-
-          <StatusStrip active={activeStatus} onSelect={setActiveStatus} />
-
-          <GenreStrip
-            genres={allGenres}
-            active={activeGenre}
-            onSelect={setActiveGenre}
-          />
-        </div>
+            ) : null
+          }
+        />
 
         <div className="px-3.5 py-6 sm:px-6 sm:py-8">
           <CompareManager>
