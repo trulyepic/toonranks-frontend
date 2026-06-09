@@ -106,10 +106,22 @@ const Header = () => {
     setSelectedCategory(DEFAULT_LABEL);
   };
 
+  // When searching from a category page (/type/<TYPE>), keep that category
+  // context so results show their within-category rank. From anywhere else,
+  // search lands on the All rankings page (home).
+  const searchBasePath = () => {
+    const path = location.pathname || "/";
+    if (path.startsWith("/type/")) {
+      const seg = path.split("/")[2];
+      if (seg) return `/type/${seg}`;
+    }
+    return "/";
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      navigate(`/?search=${encodeURIComponent(searchTerm)}`);
+      navigate(`${searchBasePath()}?search=${encodeURIComponent(searchTerm)}`);
       setMobileMenuOpen(false);
       setMobileAccountOpen(false);
     }
@@ -121,7 +133,7 @@ const Header = () => {
     if (!value) return;
     setSearchTerm(value);
     closeMobileSearch();
-    navigate(`/?search=${encodeURIComponent(value)}`);
+    navigate(`${searchBasePath()}?search=${encodeURIComponent(value)}`);
   };
 
   const handleMobileSearchSelect = (item: RankedSeries) => {
@@ -568,7 +580,9 @@ const Header = () => {
                         if (!value) return;
                         setSearchTerm(value);
                         closeMobileSearch();
-                        navigate(`/?search=${encodeURIComponent(value)}`);
+                        navigate(
+                          `${searchBasePath()}?search=${encodeURIComponent(value)}`
+                        );
                       }}
                       className="mt-3 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 dark:bg-[linear-gradient(135deg,_#315ff4,_#2347c5)] dark:hover:brightness-110"
                     >
