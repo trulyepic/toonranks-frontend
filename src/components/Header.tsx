@@ -190,7 +190,7 @@ const Header = () => {
 
     const timer = window.setTimeout(async () => {
       try {
-        const results = await searchSeries(query, controller.signal);
+        const results = await searchSeries(query, { signal: controller.signal });
         setMobileSearchResults(results.slice(0, 8));
       } catch (err) {
         if (!controller.signal.aborted) {
