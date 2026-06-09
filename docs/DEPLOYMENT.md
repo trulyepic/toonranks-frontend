@@ -59,8 +59,9 @@ until you promote.
   ship prod by themselves. `uat` auto-build stays ON.
 - **`.github/workflows/deploy-production.yml`** — manual (`workflow_dispatch`)
   production release. Assumes the AWS OIDC role (`vars.AWS_ROLE_TO_ASSUME`) and
-  calls `aws amplify start-job --branch-name main --job-type RELEASE`, then waits
-  for the job to finish. There is intentionally **no `environment:`** on the job
+  calls `aws amplify start-job --branch-name main --job-type RELEASE`, waits for the
+  job to finish, then **purges the Cloudflare cache** (`purge_everything`) so the new
+  build is served immediately. There is intentionally **no `environment:`** on the job
   (see gotchas).
 - **`.github/workflows/frontend-ci.yml`** — runs on PRs/pushes to `main` and
   `uat`. Its "Amplify deployment" wait job only runs on **push to `uat`** (the
@@ -86,8 +87,11 @@ until you promote.
 - **IAM permission:** the role needs `amplify:StartJob` (plus `GetJob` /
   `ListJobs` for polling). Already granted on
   `GitHubActionsAmplifyDeployReadOnly-ToonRanks`.
-- **Cloudflare cache:** after a prod deploy, if a stale build is served, purge the
-  Cloudflare cache (the classic "blank screen after deploy" symptom).
+- **Cloudflare cache:** the "Deploy to Production" workflow now **purges Cloudflare
+  automatically** as its last step (after the Amplify release succeeds), using the
+  `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` repo secrets. This fixes the classic
+  "blank screen / stale 404s after deploy" symptom without a manual purge. If you ever
+  deploy outside this workflow, purge Cloudflare by hand.
 
 ## Hotfixes
 
