@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TrashIcon, PencilSquareIcon } from "@heroicons/react/24/solid";
 import { Palette, Pencil, StarIcon } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -77,6 +77,16 @@ const ManCard = ({
   status,
 }: Props) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Under SSR the <img> is already in the HTML, so the browser can finish loading
+  // it before React attaches the onLoad handler — the event is missed and the
+  // card stays on its placeholder. Catch that by checking `complete` on mount.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) setImageLoaded(true);
+  }, []);
+
   const showVotes = votes >= 10;
   const showListBtn = !!onAddToReadingList;
   const showCompareBtn = !!onCompareToggle;
@@ -140,6 +150,7 @@ const ManCard = ({
           <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-100 dark:bg-[#241d19]">
             {!imageLoaded && <ShimmerBox className="h-full w-full" />}
             <img
+              ref={imgRef}
               src={coverUrl}
               alt={`Cover for ${title}`}
               onLoad={() => setImageLoaded(true)}
