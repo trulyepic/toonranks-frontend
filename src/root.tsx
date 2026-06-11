@@ -29,9 +29,11 @@ const GTAG_CONSENT = `
   gtag("config","AW-948761939");
 `;
 
-// The document shell. Replaces index.html. Per-page <title>/meta still come from
-// each page's react-helmet (client-side) in Phase 1; Phase 2 moves the public
-// routes to native meta() so they land in prerendered HTML.
+// The document shell. Replaces index.html. The public content routes (Home,
+// About, Contact, Terms, Privacy, How-Rankings-Work) set <title>/meta via native
+// route meta()/links() exports, rendered by <Meta/>/<Links/> below; the remaining
+// (mostly auth-gated) pages still use react-helmet client-side. Phase 2 prerenders
+// the public routes so their native meta lands in static HTML.
 export function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">

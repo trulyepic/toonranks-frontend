@@ -1,29 +1,35 @@
 // src/pages/AboutPage.tsx
 
-import { Helmet } from "react-helmet";
 import SocialLinks from "../components/SocialLinks";
 import { absoluteUrl, SITE_NAME } from "../config/site";
 import { infoPageBodyText, infoPageHeadingText } from "../util/infoPageStyles";
 
+export function meta() {
+  return [
+    { title: `About | ${SITE_NAME}` },
+    {
+      name: "description",
+      content:
+        "Learn about Toon Ranks, a community-powered platform for discovering, ranking, and discussing manga, manhwa, and manhua.",
+    },
+    { property: "og:title", content: `About | ${SITE_NAME}` },
+    {
+      property: "og:description",
+      content:
+        "Learn about Toon Ranks and how readers use it to discover, rank, and discuss series.",
+    },
+    { property: "og:url", content: absoluteUrl("/about") },
+    { property: "og:type", content: "website" },
+  ];
+}
+
+export function links() {
+  return [{ rel: "canonical", href: absoluteUrl("/about") }];
+}
+
 const AboutPage = () => {
   return (
     <div className="max-w-4xl mx-auto py-16 px-4">
-      <Helmet>
-        <title>About | {SITE_NAME}</title>
-        <link rel="canonical" href={absoluteUrl("/about")} />
-        <meta
-          name="description"
-          content="Learn about Toon Ranks, a community-powered platform for discovering, ranking, and discussing manga, manhwa, and manhua."
-        />
-        <meta property="og:title" content={`About | ${SITE_NAME}`} />
-        <meta
-          property="og:description"
-          content="Learn about Toon Ranks and how readers use it to discover, rank, and discuss series."
-        />
-        <meta property="og:url" content={absoluteUrl("/about")} />
-        <meta property="og:type" content="website" />
-      </Helmet>
-
       <h1 className={`mb-4 text-3xl font-bold ${infoPageHeadingText}`}>
         About {SITE_NAME}
       </h1>

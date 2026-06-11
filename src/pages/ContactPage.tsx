@@ -1,6 +1,5 @@
 // src/pages/ContactPage.tsx
 
-import { Helmet } from "react-helmet";
 import SocialLinks from "../components/SocialLinks";
 import {
   absoluteUrl,
@@ -10,24 +9,30 @@ import {
 } from "../config/site";
 import { infoPageBodyText, infoPageHeadingText } from "../util/infoPageStyles";
 
+export function meta() {
+  return [
+    { title: `Contact | ${SITE_NAME}` },
+    {
+      name: "description",
+      content: `Contact ${SITE_NAME}, operated by ${OPERATOR_NAME}, for questions, suggestions, and collaboration inquiries.`,
+    },
+    { property: "og:title", content: `Contact | ${SITE_NAME}` },
+    {
+      property: "og:description",
+      content: `Get in touch with ${SITE_NAME}, operated by ${OPERATOR_NAME}.`,
+    },
+    { property: "og:url", content: absoluteUrl("/contact") },
+    { property: "og:type", content: "website" },
+  ];
+}
+
+export function links() {
+  return [{ rel: "canonical", href: absoluteUrl("/contact") }];
+}
+
 const ContactPage = () => {
   return (
     <div className="max-w-4xl mx-auto py-16 px-4">
-      <Helmet>
-        <title>Contact | {SITE_NAME}</title>
-        <link rel="canonical" href={absoluteUrl("/contact")} />
-        <meta
-          name="description"
-          content={`Contact ${SITE_NAME}, operated by ${OPERATOR_NAME}, for questions, suggestions, and collaboration inquiries.`}
-        />
-        <meta property="og:title" content={`Contact | ${SITE_NAME}`} />
-        <meta
-          property="og:description"
-          content={`Get in touch with ${SITE_NAME}, operated by ${OPERATOR_NAME}.`}
-        />
-        <meta property="og:url" content={absoluteUrl("/contact")} />
-        <meta property="og:type" content="website" />
-      </Helmet>
       <h1 className={`mb-4 text-3xl font-bold ${infoPageHeadingText}`}>
         Contact Us
       </h1>

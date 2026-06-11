@@ -1,4 +1,3 @@
-import { Helmet } from "react-helmet";
 import {
   absoluteUrl,
   CONTACT_EMAIL,
@@ -13,25 +12,30 @@ import {
 
 const sectionClass = "space-y-3";
 
+export function meta() {
+  return [
+    { title: `Terms of Service | ${SITE_NAME}` },
+    {
+      name: "description",
+      content: `Read the ${SITE_NAME} Terms of Service, including rules for accounts, ratings, forum content, reading lists, reports, and acceptable use.`,
+    },
+    { property: "og:title", content: `Terms of Service | ${SITE_NAME}` },
+    {
+      property: "og:description",
+      content: `${SITE_NAME} terms for accounts, ratings, community content, and acceptable use.`,
+    },
+    { property: "og:url", content: absoluteUrl("/terms") },
+    { property: "og:type", content: "website" },
+  ];
+}
+
+export function links() {
+  return [{ rel: "canonical", href: absoluteUrl("/terms") }];
+}
+
 export default function TermsPage() {
   return (
     <div className="dark-theme-shell mx-auto max-w-4xl px-4 py-12">
-      <Helmet>
-        <title>Terms of Service | {SITE_NAME}</title>
-        <link rel="canonical" href={absoluteUrl("/terms")} />
-        <meta
-          name="description"
-          content={`Read the ${SITE_NAME} Terms of Service, including rules for accounts, ratings, forum content, reading lists, reports, and acceptable use.`}
-        />
-        <meta property="og:title" content={`Terms of Service | ${SITE_NAME}`} />
-        <meta
-          property="og:description"
-          content={`${SITE_NAME} terms for accounts, ratings, community content, and acceptable use.`}
-        />
-        <meta property="og:url" content={absoluteUrl("/terms")} />
-        <meta property="og:type" content="website" />
-      </Helmet>
-
       <h1 className={`text-3xl font-bold ${infoPageHeadingText}`}>
         Terms of Service
       </h1>
