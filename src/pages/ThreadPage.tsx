@@ -4,7 +4,9 @@ import {
   Link,
   useLocation,
   useSearchParams,
+  useLoaderData,
 } from "react-router-dom";
+import type { LoaderFunctionArgs } from "react-router";
 import {
   createForumPost,
   deleteForumPost,
@@ -27,7 +29,6 @@ import { useUser } from "../login/useUser";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import { Helmet } from "react-helmet";
 import { stripMdHeading } from "../util/strings";
 import RichReplyEditor from "../components/RichReplyEditor";
 
@@ -498,112 +499,84 @@ function Pager({
 
 void LegacyThreadPager;
 
-export default function ThreadPage() {
-  const { id } = useParams();
-  const threadId = Number(id);
-  const [thread, setThread] = useState<ForumThread | null>(null);
-  const [posts, setPosts] = useState<ForumPost[]>([]);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(15);
-  const [totalTopLevel, setTotalTopLevel] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [hasPrev, setHasPrev] = useState(false);
-  const [hasNext, setHasNext] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
+const THREAD_PAGE_SIZE = 15;
 
-  const { user } = useUser();
-  const isAdmin = (user?.role || "").toUpperCase() === "ADMIN";
-
-  // 🔧 edit state kept in ThreadPage and passed down
-  const [editPostId, setEditPostId] = useState<number | null>(null);
-  const [editContent, setEditContent] = useState<string>("");
-  const [originalReplyComposerOpen, setOriginalReplyComposerOpen] =
-    useState(false);
-
-  const notice = useNotice();
-  const [rankMap, setRankMap] = useState<Record<string, number>>({});
-
-  // ── Quote-reply state ────────────────────────────────────────────────────
-  const [quoteKey, setQuoteKey] = useState(0);
-  const [quoteInitial, setQuoteInitial] = useState("");
-  const [quoteParentId, setQuoteParentId] = useState<number | null>(null);
-  const bottomEditorRef = useRef<HTMLDivElement | null>(null);
-
-  const handleQuote = (post: ForumPost) => {
-    const quoted = post.content_markdown
-      .split("\n")
-      .map((line) => `> ${line}`)
-      .join("\n");
-    const attribution = `> **@${post.author_username ?? "?"}** wrote:\n${quoted}\n\n`;
-    setQuoteInitial(attribution);
-    setQuoteParentId(post.id);
-    setQuoteKey((k) => k + 1);
-    setTimeout(() => {
-      bottomEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
-  };
-
-  const loc = useLocation();
-  const siteUrl = SITE_ORIGIN;
-
-  // Fetch top-10 rank map once for byline badges
-  useEffect(() => {
-    getTopRankMap().then(setRankMap).catch(() => {});
-  }, []);
-
-  // Read page from URL
-  useEffect(() => {
-    const p = parseInt(searchParams.get("page") || "1", 10);
-    setPage(Number.isFinite(p) && p > 0 ? p : 1);
-  }, [searchParams]);
-
-  const threadTitle = thread?.title
-    ? `${thread.title} - Forum - ${SITE_NAME}`
-    : `Forum thread - ${SITE_NAME}`;
-
-  const canonical = `${siteUrl}${loc.pathname.replace(/\/+$/, "")}`;
-
-  // — SEO helpers —
-  const IMG_MD_RE = /!\[[^\]]*]\((?<src>https?:\/\/[^\s)]+)\)/i;
-
-  function firstImageFromMarkdown(md: string): string | null {
-    const m = IMG_MD_RE.exec(md || "");
-    return m?.groups?.src ?? null;
-  }
-
-  function safeText(s: string, max = 155): string {
-    return (s || "")
-      .replace(/[#*_`>]+/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, max);
-  }
-
-  const raw = posts[0]?.content_markdown || "";
-  const desc = raw
+const IMG_MD_RE = /!\[[^\]]*]\((?<src>https?:\/\/[^\s)]+)\)/i;
+function firstImageFromMarkdown(md: string): string | null {
+  const m = IMG_MD_RE.exec(md || "");
+  return m?.groups?.src ?? null;
+}
+function safeText(s: string, max = 155): string {
+  return (s || "")
     .replace(/[#*_`>]+/g, "")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 155);
+    .slice(0, max);
+}
 
-  // Prefer the first inline image in the OP, else a series cover, else site icon
+type ThreadLoaderData = {
+  thread: ForumThread | null;
+  posts: ForumPost[];
+  totalTopLevel: number;
+  totalPages: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+};
+
+// SSR loader: fetch the thread + first page of posts on the server so the
+// discussion content + meta/JSON-LD are in the initial HTML for crawlers.
+export async function loader({
+  params,
+}: LoaderFunctionArgs): Promise<ThreadLoaderData> {
+  const threadId = Number(params.id);
+  const empty: ThreadLoaderData = {
+    thread: null,
+    posts: [],
+    totalTopLevel: 0,
+    totalPages: 1,
+    hasPrev: false,
+    hasNext: false,
+  };
+  if (!Number.isFinite(threadId)) return empty;
+  const r = await getForumThreadPaged(threadId, 1, THREAD_PAGE_SIZE).catch(
+    () => null
+  );
+  if (!r) return empty;
+  return {
+    thread: r.thread ?? null,
+    posts: r.posts ?? [],
+    totalTopLevel: r.total_top_level ?? 0,
+    totalPages: r.total_pages ?? 1,
+    hasPrev: r.has_prev ?? false,
+    hasNext: r.has_next ?? false,
+  };
+}
+
+export function meta({
+  data,
+  params,
+}: {
+  data?: ThreadLoaderData;
+  params: { id?: string };
+}) {
+  const thread = data?.thread ?? null;
+  const posts = data?.posts ?? [];
+  const canonical = `${SITE_ORIGIN}/forum/${params.id}`;
+  const title = thread?.title
+    ? `${thread.title} - Forum - ${SITE_NAME}`
+    : `Forum thread - ${SITE_NAME}`;
   const op = posts[0];
-  const opImgFromMd = op ? firstImageFromMarkdown(op.content_markdown) : null;
+  const raw = op?.content_markdown || "";
+  const desc = safeText(raw, 155);
   const ogImage =
-    opImgFromMd ||
+    (op ? firstImageFromMarkdown(op.content_markdown) : null) ||
     thread?.series_refs?.[0]?.cover_url ||
     DEFAULT_SOCIAL_IMAGE;
-
-  // Dates for structured data
   const publishedTime = op ? new Date(op.created_at).toISOString() : undefined;
   const modifiedTime = op ? new Date(op.updated_at).toISOString() : undefined;
-
-  // Engagement signals
   const upvoteCount = op?.upvote_count ?? op?.heart_count ?? 0;
-  // const commentCount = Math.max(0, posts.length - 1);
   const commentCount = Math.max(0, (thread?.post_count ?? 0) - 1);
 
-  // JSON-LD: DiscussionForumPosting + BreadcrumbList
   const threadJsonLd = {
     "@context": "https://schema.org",
     "@type": "DiscussionForumPosting",
@@ -639,12 +612,7 @@ export default function ThreadPage() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Forum",
-        item: `${siteUrl}/forum`,
-      },
+      { "@type": "ListItem", position: 1, name: "Forum", item: `${SITE_ORIGIN}/forum` },
       {
         "@type": "ListItem",
         position: 2,
@@ -653,6 +621,109 @@ export default function ThreadPage() {
       },
     ],
   };
+
+  return [
+    { title },
+    { tagName: "link", rel: "canonical", href: canonical },
+    {
+      name: "description",
+      content: desc || "Read and reply to this Toon Ranks forum thread.",
+    },
+    {
+      name: "robots",
+      content:
+        "index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1",
+    },
+    { property: "og:site_name", content: SITE_NAME },
+    { property: "og:type", content: "article" },
+    { property: "og:url", content: canonical },
+    { property: "og:title", content: thread?.title || "Forum thread" },
+    {
+      property: "og:description",
+      content: desc || "Join the discussion on Toon Ranks.",
+    },
+    { property: "og:image", content: ogImage },
+    ...(publishedTime
+      ? [{ property: "article:published_time", content: publishedTime }]
+      : []),
+    ...(modifiedTime
+      ? [{ property: "article:modified_time", content: modifiedTime }]
+      : []),
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: thread?.title || "Forum thread" },
+    {
+      name: "twitter:description",
+      content: desc || "Join the discussion on Toon Ranks.",
+    },
+    { name: "twitter:image", content: ogImage },
+    { "script:ld+json": threadJsonLd },
+    { "script:ld+json": breadcrumbJsonLd },
+  ];
+}
+
+export default function ThreadPage() {
+  const { id } = useParams();
+  const threadId = Number(id);
+  const threadData = useLoaderData() as ThreadLoaderData | null;
+  const [thread, setThread] = useState<ForumThread | null>(
+    threadData?.thread ?? null
+  );
+  const [posts, setPosts] = useState<ForumPost[]>(threadData?.posts ?? []);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(THREAD_PAGE_SIZE);
+  const [totalTopLevel, setTotalTopLevel] = useState(
+    threadData?.totalTopLevel ?? 0
+  );
+  const [totalPages, setTotalPages] = useState(threadData?.totalPages ?? 1);
+  const [hasPrev, setHasPrev] = useState(threadData?.hasPrev ?? false);
+  const [hasNext, setHasNext] = useState(threadData?.hasNext ?? false);
+  const skipInitialLoad = useRef(Boolean(threadData?.thread));
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const { user } = useUser();
+  const isAdmin = (user?.role || "").toUpperCase() === "ADMIN";
+
+  // 🔧 edit state kept in ThreadPage and passed down
+  const [editPostId, setEditPostId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState<string>("");
+  const [originalReplyComposerOpen, setOriginalReplyComposerOpen] =
+    useState(false);
+
+  const notice = useNotice();
+  const [rankMap, setRankMap] = useState<Record<string, number>>({});
+
+  // ── Quote-reply state ────────────────────────────────────────────────────
+  const [quoteKey, setQuoteKey] = useState(0);
+  const [quoteInitial, setQuoteInitial] = useState("");
+  const [quoteParentId, setQuoteParentId] = useState<number | null>(null);
+  const bottomEditorRef = useRef<HTMLDivElement | null>(null);
+
+  const handleQuote = (post: ForumPost) => {
+    const quoted = post.content_markdown
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    const attribution = `> **@${post.author_username ?? "?"}** wrote:\n${quoted}\n\n`;
+    setQuoteInitial(attribution);
+    setQuoteParentId(post.id);
+    setQuoteKey((k) => k + 1);
+    setTimeout(() => {
+      bottomEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
+  const loc = useLocation();
+
+  // Fetch top-10 rank map once for byline badges
+  useEffect(() => {
+    getTopRankMap().then(setRankMap).catch(() => {});
+  }, []);
+
+  // Read page from URL
+  useEffect(() => {
+    const p = parseInt(searchParams.get("page") || "1", 10);
+    setPage(Number.isFinite(p) && p > 0 ? p : 1);
+  }, [searchParams]);
 
   // const load = async () => {
   //   const data = await getForumThread(threadId);
@@ -675,6 +746,10 @@ export default function ThreadPage() {
   // }, [threadId]);
 
   useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId, page]);
@@ -733,7 +808,9 @@ export default function ThreadPage() {
     setEditContent("");
   };
 
-  const reportHref = `/report-issue?page_url=${encodeURIComponent(canonical)}`;
+  const reportHref = `/report-issue?page_url=${encodeURIComponent(
+    `${SITE_ORIGIN}${loc.pathname.replace(/\/+$/, "")}`
+  )}`;
 
   const goToPage = (p: number) => {
     const next = Math.max(1, Math.min(totalPages, p));
@@ -744,54 +821,6 @@ export default function ThreadPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-6">
-      <Helmet>
-        {/* Basic SEO */}
-        <title>{threadTitle}</title>
-        <link rel="canonical" href={canonical} />
-        <meta
-          name="description"
-          content={desc || "Read and reply to this Toon Ranks forum thread."}
-        />
-        <meta
-          name="robots"
-          content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1"
-        />
-
-        {/* Open Graph */}
-        <meta property="og:site_name" content={SITE_NAME} />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content={canonical} />
-        <meta property="og:title" content={thread?.title || "Forum thread"} />
-        <meta
-          property="og:description"
-          content={desc || "Join the discussion on Toon Ranks."}
-        />
-        <meta property="og:image" content={ogImage} />
-        {publishedTime && (
-          <meta property="article:published_time" content={publishedTime} />
-        )}
-        {modifiedTime && (
-          <meta property="article:modified_time" content={modifiedTime} />
-        )}
-
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={thread?.title || "Forum thread"} />
-        <meta
-          name="twitter:description"
-          content={desc || "Join the discussion on Toon Ranks."}
-        />
-        <meta name="twitter:image" content={ogImage} />
-
-        {/* Structured data: DiscussionForumPosting + Breadcrumbs */}
-        <script type="application/ld+json">
-          {JSON.stringify(threadJsonLd)}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify(breadcrumbJsonLd)}
-        </script>
-      </Helmet>
-
 {!thread ? (
         <ThreadPageSkeleton />
       ) : (

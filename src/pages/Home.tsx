@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLoaderData } from "react-router-dom";
 import ManCard from "../components/ManCard";
 import AddSeriesModal from "../components/AddSeriesModal";
 import EditSeriesModal from "../components/EditSeriesModal";
@@ -81,10 +82,21 @@ export function links() {
   return [{ rel: "canonical", href: absoluteUrl("/") }];
 }
 
+// SSR loader: fetch the first page of rankings on the server so the homepage's
+// series cards are in the initial HTML. The client revalidates + paginates.
+export async function loader() {
+  const items = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
+    sort: "score",
+  }).catch(() => [] as RankedSeries[]);
+  return { items };
+}
+
 const Home = () => {
+  const initialItems =
+    (useLoaderData() as { items?: RankedSeries[] } | null)?.items ?? [];
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Series | null>(null);
-  const [items, setItems] = useState<RankedSeries[]>([]);
+  const [items, setItems] = useState<RankedSeries[]>(initialItems);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);

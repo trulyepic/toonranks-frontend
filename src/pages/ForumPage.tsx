@@ -15,9 +15,13 @@ import {
   updateForumCategory,
   deleteForumCategory,
 } from "../api/manApi";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useSearchParams,
+  useLoaderData,
+} from "react-router-dom";
 import { useUser } from "../login/useUser";
-import { Helmet } from "react-helmet";
 import {
   DEFAULT_SOCIAL_IMAGE,
   SITE_NAME,
@@ -132,10 +136,52 @@ function LegacyForumPager({
 
 void LegacyForumPager;
 
+type ForumLoaderData = {
+  threads: ForumThread[];
+  total: number;
+  totalPages: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+};
+
+const FORUM_PAGE_SIZE = 15;
+
+// SSR loader: fetch the first page of forum threads (default sort) on the server
+// so the thread list is in the initial HTML. The client revalidates/paginates.
+export async function loader(): Promise<ForumLoaderData> {
+  const r = await listForumThreadsPaged("", 1, FORUM_PAGE_SIZE, {
+    sort: "activity",
+  }).catch(() => null);
+  return {
+    threads: r?.items ?? [],
+    total: r?.total ?? 0,
+    totalPages: r?.total_pages ?? 1,
+    hasPrev: r?.has_prev ?? false,
+    hasNext: r?.has_next ?? false,
+  };
+}
+
+export function meta() {
+  return [
+    { title: `Forum - ${SITE_NAME}` },
+    { tagName: "link", rel: "canonical", href: `${SITE_ORIGIN}/forum` },
+    { name: "description", content: "Community forum on Toon Ranks." },
+    { property: "og:title", content: `Forum - ${SITE_NAME}` },
+    { property: "og:description", content: "Join community discussions." },
+    { property: "og:type", content: "website" },
+    { property: "og:url", content: `${SITE_ORIGIN}/forum` },
+    { property: "og:image", content: DEFAULT_SOCIAL_IMAGE },
+    { name: "twitter:card", content: "summary_large_image" },
+  ];
+}
+
 export default function ForumPage() {
   const navigate = useNavigate();
+  const forumData = useLoaderData() as ForumLoaderData | null;
   const [q, setQ] = useState("");
-  const [threads, setThreads] = useState<ForumThread[]>([]);
+  const [threads, setThreads] = useState<ForumThread[]>(
+    forumData?.threads ?? []
+  );
   const [showNew, setShowNew] = useState(false);
   const [editingThread, setEditingThread] = useState<ForumThread | null>(null);
   const [editingBody, setEditingBody] = useState<string>("");
@@ -147,17 +193,27 @@ export default function ForumPage() {
   const [rankMap, setRankMap] = useState<Record<string, number>>({});
 
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(15); // tweak if you like
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [hasPrev, setHasPrev] = useState(false);
-  const [hasNext, setHasNext] = useState(false);
+  const [pageSize] = useState(FORUM_PAGE_SIZE); // tweak if you like
+  const [total, setTotal] = useState(forumData?.total ?? 0);
+  const [totalPages, setTotalPages] = useState(forumData?.totalPages ?? 1);
+  const [hasPrev, setHasPrev] = useState(forumData?.hasPrev ?? false);
+  const [hasNext, setHasNext] = useState(forumData?.hasNext ?? false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   type SortOption = "activity" | "newest" | "replies";
   const SORT_KEY = "forum_sort";
   const [sortBy, setSortBy] = useState<SortOption>(
-    () => (sessionStorage.getItem(SORT_KEY) as SortOption | null) ?? "activity"
+    () =>
+      (typeof window !== "undefined"
+        ? (sessionStorage.getItem(SORT_KEY) as SortOption | null)
+        : null) ?? "activity"
+  );
+
+  // Skip the first client load when the server already seeded the default thread
+  // list (so we don't refetch/flash on hydration). Only when on the server's
+  // defaults — a stored non-default sort still triggers a refetch.
+  const skipInitialLoad = useRef(
+    Boolean(forumData?.threads?.length) && sortBy === "activity"
   );
 
   const [categories, setCategories] = useState<ForumCategory[]>([]);
@@ -175,16 +231,8 @@ export default function ForumPage() {
   const myName = user?.username || "";
   const isAdmin = (user?.role || "").toUpperCase() === "ADMIN";
 
-  const siteUrl = SITE_ORIGIN;
   const isSearching = !!q.trim();
-  const canonical = `${siteUrl}/forum`;
   const queryLabel = q.trim();
-  const pageTitleSafe = isSearching
-    ? `Forum search "${queryLabel}" - ${SITE_NAME}`
-    : `Forum - ${SITE_NAME}`;
-  const pageDescription = isSearching
-    ? `Search results for "${queryLabel}" in the Toon Ranks forum.`
-    : "Community forum on Toon Ranks.";
   const resultsLabel = isSearching ? `results for "${queryLabel}"` : "threads";
 
   // Fetch top-10 rank map once for byline badges
@@ -244,6 +292,10 @@ export default function ForumPage() {
   // }, [q, user?.username]);
 
   useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, page, sortBy, activeCategorySlug, user?.id]);
@@ -285,21 +337,6 @@ export default function ForumPage() {
 
   return (
     <div className="relative mx-auto max-w-5xl bg-[radial-gradient(900px_260px_at_50%_-100px,rgba(99,102,241,0.10),transparent)] px-3 py-6 dark:bg-[radial-gradient(1100px_320px_at_50%_-120px,rgba(76,175,149,0.12),transparent)] sm:px-6 sm:py-8">
-      <Helmet>
-        <title>{pageTitleSafe}</title>
-        <link rel="canonical" href={canonical} />
-        <meta name="description" content={pageDescription} />
-        <meta property="og:title" content={pageTitleSafe} />
-        <meta property="og:description" content="Join community discussions." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={canonical} />
-        <meta
-          property="og:image"
-          content={DEFAULT_SOCIAL_IMAGE}
-        />
-        <meta name="twitter:card" content="summary_large_image" />
-      </Helmet>
-
       <div className="mb-4 rounded-[2rem] border border-slate-200/80 bg-white/80 px-4 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-[#3a3028] dark:bg-[linear-gradient(135deg,rgba(31,25,21,0.98),rgba(22,18,15,0.97)_58%,rgba(18,33,28,0.72))] dark:shadow-[0_20px_55px_rgba(0,0,0,0.6)] sm:mb-6 sm:px-6 sm:py-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">

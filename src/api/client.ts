@@ -51,9 +51,12 @@ function isPublicAuthRoute(url?: string) {
 //   return config;
 // });
 
-// Attach token EXCEPT on auth routes
+// Attach token EXCEPT on auth routes.
+// `typeof window` guard: under SSR this interceptor runs in Node, where
+// `localStorage` doesn't exist. Server-side requests (route loaders) fetch only
+// public data, so there's no token to attach there — skip it instead of crashing.
 api.interceptors.request.use((config) => {
-  if (!isPublicAuthRoute(config.url)) {
+  if (!isPublicAuthRoute(config.url) && typeof window !== "undefined") {
     const token = localStorage.getItem("token");
     if (token) {
       config.headers = config.headers ?? {};

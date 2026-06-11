@@ -9,14 +9,14 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    // Build once, then serve the static SPA via `vite preview`. Running against
-    // the dev server let Vite's dep optimizer race Playwright on cold CI starts
-    // (transient chunk 404s -> JS never loads -> empty <title>), which made the
-    // smoke tests flaky on a different route each run. The built bundle has no
-    // runtime dep optimization, so this is deterministic. VITE_* env vars are
-    // baked at build time, so they must be set on this (build) command.
-    command:
-      "npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort",
+    // Build once, then run the SSR server (react-router-serve) — under ssr:true
+    // the app is server-rendered, so we can't serve it as a static bundle. We
+    // build against a dead API base so the app's data fetches fail fast in tests
+    // (the smoke tests only assert server-rendered titles/content, which come
+    // from native meta() and don't need the API). VITE_* are baked at build time;
+    // PORT is read by react-router-serve at runtime. Both are set here so they
+    // apply to the build and the server.
+    command: "npm run build && npm run start",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
     timeout: 180000,
@@ -24,6 +24,8 @@ export default defineConfig({
       VITE_APP_BASE_URL: "http://127.0.0.1:9",
       VITE_GOOGLE_CLIENT_ID: "test-google-client-id",
       VITE_RECAPTCHA_SITE_KEY: "test-recaptcha-site-key",
+      HOST: "127.0.0.1",
+      PORT: "4173",
     },
   },
   projects: [

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import ReCAPTCHA from "react-google-recaptcha";
+import { ClientOnly } from "../components/ClientOnly";
 import { Link } from "react-router-dom";
 import { forgotPassword } from "../api/manApi";
 import AuthShell from "../components/AuthShell";
@@ -104,19 +105,23 @@ const ForgotPasswordPage = () => {
         </label>
 
         <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-3 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))]">
-          <ReCAPTCHA
-            ref={recaptchaRef}
-            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-            onChange={(token) => setCaptchaToken(token || "")}
-            onExpired={() => {
-              setCaptchaToken("");
-              setError("CAPTCHA expired. Please try again.");
-            }}
-            onError={() => {
-              setCaptchaToken("");
-              setError("CAPTCHA failed to load. Please retry.");
-            }}
-          />
+          <ClientOnly>
+            {() => (
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                onChange={(token) => setCaptchaToken(token || "")}
+                onExpired={() => {
+                  setCaptchaToken("");
+                  setError("CAPTCHA expired. Please try again.");
+                }}
+                onError={() => {
+                  setCaptchaToken("");
+                  setError("CAPTCHA failed to load. Please retry.");
+                }}
+              />
+            )}
+          </ClientOnly>
         </div>
 
         <button
