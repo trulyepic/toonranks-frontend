@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLoaderData } from "react-router-dom";
 import ManCard from "../components/ManCard";
 import AddSeriesModal from "../components/AddSeriesModal";
@@ -97,6 +97,10 @@ const Home = () => {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Series | null>(null);
   const [items, setItems] = useState<RankedSeries[]>(initialItems);
+  // Skip the first client load when the server already seeded page 1 (default
+  // filters), so we don't clear the SSR cards on hydration. Search/filter
+  // changes still reset + refetch.
+  const skipInitialLoad = useRef(initialItems.length > 0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -273,6 +277,10 @@ const Home = () => {
   // modes: searching uses the search endpoint; otherwise genre + status compose
   // server-side on the rankings endpoint.
   useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
     const fetchData = async () => {
       if (searchTerm.trim()) {
         try {
