@@ -29,6 +29,21 @@ const GTAG_CONSENT = `
   gtag("config","AW-948761939");
 `;
 
+// Default document metadata. React Router renders the deepest matching route's
+// meta(), so any leaf route that exports its own meta() (the prerendered public
+// routes) fully replaces this; routes without one — and the SPA fallback shell —
+// inherit these site-wide defaults instead of an empty <title>.
+export function meta() {
+  return [
+    { title: "Toon Ranks | Top Manga, Manhwa, and Manhua" },
+    {
+      name: "description",
+      content:
+        "Toon Ranks - Discover and rank your favorite Manga, Manhwa, and Manhua!",
+    },
+  ];
+}
+
 // The document shell. Replaces index.html. The public content routes (Home,
 // About, Contact, Terms, Privacy, How-Rankings-Work) set <title>/meta via native
 // route meta()/links() exports, rendered by <Meta/>/<Links/> below; the remaining
@@ -51,10 +66,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta name="apple-mobile-web-app-title" content="Toon Ranks" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="theme-color" content="#ffffff" />
-        <meta
-          name="description"
-          content="Toon Ranks - Discover and rank your favorite Manga, Manhwa, and Manhua!"
-        />
 
         <meta
           name="google-site-verification"

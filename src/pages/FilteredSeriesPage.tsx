@@ -1,6 +1,6 @@
-import { useParams } from "react-router-dom";
+import { useParams, useLoaderData } from "react-router-dom";
+import type { LoaderFunctionArgs } from "react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Helmet } from "react-helmet";
 import {
   deleteSeries,
   fetchRankedSeriesPaginated,
@@ -30,11 +30,47 @@ import {
 
 const PAGE_SIZE = 25;
 
+// SSR loader: fetch the first page of this type's rankings on the server so the
+// cards are in the initial HTML. The client revalidates, filters, and paginates.
+export async function loader({ params }: LoaderFunctionArgs) {
+  const seriesType = params.seriesType;
+  if (!seriesType) return { items: [] as RankedSeries[] };
+  const items = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
+    type: seriesType.toUpperCase(),
+    sort: "score",
+  }).catch(() => [] as RankedSeries[]);
+  return { items };
+}
+
+export function meta({ params }: { params: { seriesType?: string } }) {
+  const typeLabel = (params.seriesType || "").toUpperCase();
+  const pageTitle = `Top ${typeLabel} Rankings | ${SITE_NAME}`;
+  const pageDescription = `Browse top-ranked ${typeLabel.toLowerCase()} series on ${SITE_NAME}. Discover popular titles, compare scores, and save your favorites.`;
+  const url = absoluteUrl(`/type/${typeLabel}`);
+  return [
+    { title: pageTitle },
+    { tagName: "link", rel: "canonical", href: url },
+    { name: "description", content: pageDescription },
+    { property: "og:title", content: pageTitle },
+    { property: "og:description", content: pageDescription },
+    { property: "og:url", content: url },
+    { property: "og:type", content: "website" },
+    { property: "og:image", content: DEFAULT_SOCIAL_IMAGE },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: pageTitle },
+    { name: "twitter:description", content: pageDescription },
+    { name: "twitter:image", content: DEFAULT_SOCIAL_IMAGE },
+  ];
+}
+
 const FilteredSeriesPage = () => {
   const { seriesType } = useParams();
   const { searchTerm } = useSearch();
 
-  const [items, setItems] = useState<RankedSeries[]>([]);
+  const initialItems =
+    (useLoaderData() as { items?: RankedSeries[] } | null)?.items ?? [];
+  const [items, setItems] = useState<RankedSeries[]>(initialItems);
+  const skipInitialLoad = useRef(initialItems.length > 0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -47,9 +83,6 @@ const FilteredSeriesPage = () => {
 
   const { user } = useUser();
   const isAdmin = isAdminUser(user);
-  const typeLabel = (seriesType || "").toUpperCase();
-  const pageTitle = `Top ${typeLabel} Rankings | ${SITE_NAME}`;
-  const pageDescription = `Browse top-ranked ${typeLabel.toLowerCase()} series on ${SITE_NAME}. Discover popular titles, compare scores, and save your favorites.`;
 
   const [showListModal, setShowListModal] = useState(false);
   const [modalSeriesId, setModalSeriesId] = useState<number | undefined>();
@@ -190,6 +223,14 @@ const FilteredSeriesPage = () => {
   useEffect(() => {
     if (!seriesType) return;
 
+    // Skip the first run when the server already seeded page 1 (default filters)
+    // so we don't clear the SSR cards on hydration. Filter/search/type changes
+    // still reset + refetch.
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
+
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -252,20 +293,6 @@ const FilteredSeriesPage = () => {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
-      <Helmet>
-        <title>{pageTitle}</title>
-        <link rel="canonical" href={absoluteUrl(`/type/${typeLabel}`)} />
-        <meta name="description" content={pageDescription} />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content={absoluteUrl(`/type/${typeLabel}`)} />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content={DEFAULT_SOCIAL_IMAGE} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={pageTitle} />
-        <meta name="twitter:description" content={pageDescription} />
-        <meta name="twitter:image" content={DEFAULT_SOCIAL_IMAGE} />
-      </Helmet>
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">
         <RankingsToolbar
           contextLabel={seriesType?.toUpperCase() ?? "Rankings"}

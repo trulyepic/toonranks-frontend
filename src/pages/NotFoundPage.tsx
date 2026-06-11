@@ -1,19 +1,28 @@
 // src/pages/NotFoundPage.tsx
 
-import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { HomeIcon, ChatBubbleLeftRightIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { SITE_NAME } from "../config/site";
 import { infoPageBodyText, infoPageHeadingText, infoPageSubtleText } from "../util/infoPageStyles";
 
+// Return a real HTTP 404 (not a soft-404/200) for unknown URLs so search engines
+// drop them instead of indexing empty pages. The loader throws a 404 Response and
+// the ErrorBoundary below renders this page.
+export function loader() {
+  throw new Response("Not Found", { status: 404 });
+}
+
+export function meta() {
+  return [
+    { title: `404 — Page Not Found | ${SITE_NAME}` },
+    { name: "robots", content: "noindex, nofollow" },
+    { name: "description", content: "This page could not be found." },
+  ];
+}
+
 const NotFoundPage = () => {
   return (
     <div className="max-w-2xl mx-auto py-24 px-4 text-center">
-      <Helmet>
-        <title>404 — Page Not Found | {SITE_NAME}</title>
-        <meta name="robots" content="noindex, nofollow" />
-        <meta name="description" content="This page could not be found." />
-      </Helmet>
 
       {/* Large 404 badge */}
       <div className="inline-flex items-center justify-center mb-8">
@@ -108,3 +117,9 @@ const NotFoundPage = () => {
 };
 
 export default NotFoundPage;
+
+// The loader always throws a 404, so this is what actually renders for unknown
+// URLs — giving a 404 status with the friendly page above.
+export function ErrorBoundary() {
+  return <NotFoundPage />;
+}
