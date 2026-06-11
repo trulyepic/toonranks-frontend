@@ -1,13 +1,9 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
+import { reactRouter } from "@react-router/dev/vite";
+import { defineConfig } from "vite";
 
-// https://vite.dev/config/
+// SPIKE config (Phase 0) — uses the React Router framework plugin so we can
+// run `react-router build` and verify prerendered static HTML. The original
+// SPA/vitest config is saved as vite.config.original.bak.
 export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
-    globals: true,
-    setupFiles: './src/test/setup.ts',
-  },
-})
+  plugins: [reactRouter()],
+});
