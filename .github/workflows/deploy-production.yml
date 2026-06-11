@@ -1,0 +1,49 @@
+name: Deploy to Production (Railway)
+
+# Manual, gated production release.
+#
+# The production Railway service (`toonranks-frontend`, serving www.toonranks.com)
+# has auto-deploy DISABLED, so merging to `main` never ships prod by itself. A
+# maintainer runs this workflow to deploy the current `main` to production. The
+# UAT service (uat.toonranks.com) auto-deploys `main` separately for testing.
+#
+# Setup (one-time): create a Railway token scoped to this project's `production`
+# environment (Railway → project → Settings → Tokens) and add it as the GitHub
+# repo secret `RAILWAY_TOKEN`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm a production release'
+        required: true
+        default: ""
+
+jobs:
+  deploy-production:
+    name: Release main to production (Railway)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require explicit confirmation
+        if: ${{ inputs.confirm != 'deploy' }}
+        run: |
+          echo "::error::Type 'deploy' in the confirm box to release to production."
+          exit 1
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      # `railway up` uploads this checkout and builds it on Railway using the
+      # production service's own environment variables (the VITE_* values), then
+      # deploys it. `--ci` streams the build/deploy logs here so progress is
+      # visible in the Actions tab. Production env is selected by the token.
+      - name: Deploy main to the production service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service toonranks-frontend --ci
