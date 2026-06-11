@@ -1,5 +1,10 @@
 # Architecture — Toon Ranks Frontend
 
+> ⚠️ **Partially outdated.** As of the 2026 SSR migration the app is **server-rendered**
+> (React Router v7 framework mode, `ssr: true`) and hosted on **Railway** (Node), not a
+> client-only SPA on AWS Amplify. Routing is in `src/routes.ts`; the shell/providers are
+> in `src/root.tsx`. See `CLAUDE.md` and `docs/DEPLOYMENT.md` for current facts.
+
 ## System overview
 
 ```

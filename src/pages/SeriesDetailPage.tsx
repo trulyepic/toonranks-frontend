@@ -13,6 +13,7 @@ import { UsersIcon } from "@heroicons/react/24/outline";
 import SeriesDetailShimmer from "../components/SeriesDetailShimmer";
 import type { SeriesDetailData } from "../types/types";
 import RatingInfoTooltip from "../components/RatingInfoTooltip";
+import NotFoundPage from "./NotFoundPage";
 import { getDisplayVoteCounts } from "../util/displayVoteCounts";
 import { isAdminRole } from "../util/roleUtils";
 import { useUser } from "../login/useUser";
@@ -34,11 +35,16 @@ export async function loader({
   params,
 }: LoaderFunctionArgs): Promise<SeriesLoaderData> {
   const id = Number(params.id);
-  if (!Number.isFinite(id)) return { seriesDetail: null, summary: null };
+  if (!Number.isFinite(id)) throw new Response("Not Found", { status: 404 });
   const [seriesDetail, summary] = await Promise.all([
     getSeriesDetailById(id).catch(() => null),
     getSeriesSummary(id).catch(() => null),
   ]);
+  // A real series has at least a summary; neither = deleted/nonexistent, so
+  // return a proper 404 instead of a soft-404 (empty 200 page).
+  if (!seriesDetail && !summary) {
+    throw new Response("Not Found", { status: 404 });
+  }
   return { seriesDetail, summary };
 }
 
@@ -511,3 +517,9 @@ const RatingCard = ({
 );
 
 export default SeriesDetailPage;
+
+// Renders the friendly 404 page (with a 404 status) when the loader throws for a
+// deleted/nonexistent series.
+export function ErrorBoundary() {
+  return <NotFoundPage />;
+}

@@ -14,13 +14,21 @@ Toon Ranks is a community ranking and review platform for manga, manhwa, and man
 This repo is the **React/TypeScript web frontend** deployed on AWS Amplify.
 
 Key facts:
-- SPA built with Vite + React 18 + TypeScript
+- **Server-rendered (SSR)** app — **React Router v7 framework mode** (`ssr: true`),
+  Vite + React 19 + TypeScript. (Was a client-only Vite SPA on React Router v6;
+  migrated to SSR in 2026 to fix SEO/AdSense — content is now in the initial HTML.)
+- Routing: **file-based config in `src/routes.ts`** (was `App.tsx`). Root layout +
+  providers live in `src/root.tsx`. Pages render server-side via route `loader`s and
+  set head tags via native `meta()`/`links()` exports.
 - Styling: Tailwind CSS (dark mode via `class` strategy)
-- Routing: React Router v6 (`BrowserRouter`)
 - API: all calls go through `src/api/client.ts` (axios instance)
-- Auth: JWT stored in `localStorage`, auto-expiry via JWT decode
-- Testing: Vitest (unit) + Playwright (e2e)
-- Deployed on **AWS Amplify** — `uat` branch auto-deploys to `uat.toonranks.com`, `main` deploys to `toonranks.com` via a manual GitHub Action
+- Auth: JWT stored in `localStorage`, auto-expiry via JWT decode (client-only; guard
+  any `window`/`localStorage` access so it doesn't run during server render)
+- Testing: Vitest (unit) + Playwright (e2e, runs against the built SSR server)
+- Deployed on **Railway** (Node server, `react-router-serve ./build/server/index.js`,
+  started via `npm run start`). `www.toonranks.com` + `uat.toonranks.com` are served by
+  Railway behind **Cloudflare** DNS. The Railway service auto-deploys on push to its
+  configured branch. (Was AWS Amplify static hosting; retired during the SSR migration.)
 
 ---
 
@@ -28,9 +36,11 @@ Key facts:
 
 ```
 src/
-  main.tsx          — app entry: wraps in GoogleOAuthProvider, ThemeProvider, UserProvider
-  App.tsx           — BrowserRouter + all Routes defined here
-  App.css           — global styles
+  root.tsx          — SSR document shell (<html>) + app providers (GoogleOAuthProvider,
+                      ThemeProvider, UserProvider) + default meta(). Replaces main.tsx/App.tsx.
+  routes.ts         — file-based route config (the single source of truth for routing)
+  entry.server.tsx / entry.client.tsx — SSR + hydration entry points
+  sitemap/          — resource routes that proxy /sitemap*.xml + /sitemaps/* to the backend
 
   api/
     client.ts       — axios instance, base URL from VITE_APP_BASE_URL, JWT interceptor, 401 handler
@@ -118,8 +128,12 @@ All env vars must start with `VITE_` to be available in the browser bundle.
 7. **Theme is `light` | `dark`**, controlled by `ThemeContext`. Tailwind `dark:` classes respond to the `dark` class on `<html>`. Never hardcode dark/light colours outside Tailwind classes.
 8. **TypeScript is strict** — no `any` unless truly unavoidable and commented. Run `npm run build` to confirm type-check passes.
 9. **Linter is ESLint** — run `npm run lint` before considering work done.
-10. **New routes** must be added to `App.tsx` — the single source of truth for routing.
-11. **SEO** — every public page should render a `<Seo>` component with appropriate title/description. See `src/components/Seo.tsx`.
+10. **New routes** must be added to `src/routes.ts` — the single source of truth for routing.
+11. **SEO** — public pages put their content in the **server HTML** via a route `loader`
+    (fetch data server-side) and set title/description/OG/JSON-LD via native `meta()`/
+    `links()` exports (not `react-helmet`, which only runs client-side and is being phased
+    out). Unknown URLs / deleted items must return a real **404** (throw a 404 `Response`
+    in the loader), not a soft-404 200.
 12. **Do not delete commented-out code** unless the user asks — it may be intentional reference.
 
 ---
@@ -128,7 +142,7 @@ All env vars must start with `VITE_` to be available in the browser bundle.
 
 See `docs/CONVENTIONS.md` for the full reference. Short version:
 
-- **New page** → `src/pages/MyPage.tsx` + route in `App.tsx`
+- **New page** → `src/pages/MyPage.tsx` + route in `src/routes.ts`
 - **New shared component** → `src/components/MyComponent.tsx`
 - **New API call** → function in `src/api/manApi.ts` using `api` from `client.ts`
 - **New util** → `src/util/myUtil.ts` (pure functions, no React)
@@ -178,7 +192,7 @@ See `docs/CONVENTIONS.md` for the full reference. Short version:
 
 | Repo | Purpose | Deployment |
 |---|---|---|
-| `toonranks-frontend` | **This repo** — Vite/React web app | AWS Amplify |
+| `toonranks-frontend` | **This repo** — React Router v7 SSR web app | Railway (Node SSR) |
 | `toonranks-backend` | FastAPI REST API | Railway |
 | `toon-ranks-mobile` | React Native / Expo mobile app | EAS (Google Play) |
 
