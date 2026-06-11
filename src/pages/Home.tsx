@@ -15,7 +15,6 @@ import {
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useSearch } from "../components/useSearch";
 import ShimmerLoader from "../components/ShimmerLoader";
-import { Helmet } from "react-helmet";
 import CompareManager from "../components/CompareManager";
 import { useUser } from "../login/useUser";
 import ReadingListModal from "../components/ReadingListModal";
@@ -31,6 +30,56 @@ import {
 // import { Link } from "react-router-dom";
 
 const PAGE_SIZE = 25;
+
+export function meta() {
+  return [
+    { title: `${SITE_NAME} | Top Manga, Manhwa, and Manhua` },
+    {
+      name: "description",
+      content:
+        "Browse the top-ranked Manga, Manhwa, and Manhua. Vote, review, and explore amazing series on Toon Ranks!",
+    },
+    {
+      property: "og:title",
+      content: `${SITE_NAME} | Top Manga, Manhwa, and Manhua`,
+    },
+    {
+      property: "og:description",
+      content: "Vote, review, and explore top-rated manga and webtoons!",
+    },
+    { property: "og:image", content: DEFAULT_SOCIAL_IMAGE },
+    { property: "og:url", content: absoluteUrl("/") },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: SITE_NAME },
+    {
+      name: "twitter:description",
+      content: "Discover and rate the best manga, manhwa, and manhua.",
+    },
+    { name: "twitter:image", content: DEFAULT_SOCIAL_IMAGE },
+    {
+      "script:ld+json": {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: SITE_NAME,
+        url: SITE_ORIGIN,
+        publisher: {
+          "@type": "Organization",
+          name: OPERATOR_NAME,
+        },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${SITE_ORIGIN}/?search={search_term_string}`,
+          "query-input": "required name=search_term_string",
+        },
+      },
+    },
+  ];
+}
+
+export function links() {
+  return [{ rel: "canonical", href: absoluteUrl("/") }];
+}
 
 const Home = () => {
   const [showModal, setShowModal] = useState(false);
@@ -267,58 +316,6 @@ const Home = () => {
   // console.log("Items:", items);
   return (
     <>
-      <Helmet>
-        <title>{SITE_NAME} | Top Manga, Manhwa, and Manhua</title>
-        <meta
-          name="description"
-          content="Browse the top-ranked Manga, Manhwa, and Manhua. Vote, review, and explore amazing series on Toon Ranks!"
-        />
-        <meta
-          property="og:title"
-          content={`${SITE_NAME} | Top Manga, Manhwa, and Manhua`}
-        />
-        <meta
-          property="og:description"
-          content="Vote, review, and explore top-rated manga and webtoons!"
-        />
-        <meta
-          property="og:image"
-          content={DEFAULT_SOCIAL_IMAGE}
-        />
-        <meta property="og:url" content={absoluteUrl("/")} />
-        <meta property="og:type" content="website" />
-
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={SITE_NAME} />
-        <meta
-          name="twitter:description"
-          content="Discover and rate the best manga, manhwa, and manhua."
-        />
-        <meta
-          name="twitter:image"
-          content={DEFAULT_SOCIAL_IMAGE}
-        />
-
-        <link rel="canonical" href={absoluteUrl("/")} />
-
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            name: SITE_NAME,
-            url: SITE_ORIGIN,
-            publisher: {
-              "@type": "Organization",
-              name: OPERATOR_NAME,
-            },
-            potentialAction: {
-              "@type": "SearchAction",
-              target: `${SITE_ORIGIN}/?search={search_term_string}`,
-              "query-input": "required name=search_term_string",
-            },
-          })}
-        </script>
-      </Helmet>
 
       <div className="mx-auto w-full max-w-7xl px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">

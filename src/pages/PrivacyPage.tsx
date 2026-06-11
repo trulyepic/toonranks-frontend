@@ -1,4 +1,3 @@
-import { Helmet } from "react-helmet";
 import {
   absoluteUrl,
   CONTACT_EMAIL,
@@ -13,25 +12,30 @@ import {
 
 const sectionClass = "space-y-3";
 
+export function meta() {
+  return [
+    { title: `Privacy Policy | ${SITE_NAME}` },
+    {
+      name: "description",
+      content: `Read the ${SITE_NAME} Privacy Policy, including how account, OAuth, CAPTCHA, analytics, forum, reading list, report, and screenshot data may be used.`,
+    },
+    { property: "og:title", content: `Privacy Policy | ${SITE_NAME}` },
+    {
+      property: "og:description",
+      content: `How ${SITE_NAME}, operated by ${OPERATOR_NAME}, handles account, community, report, and analytics data.`,
+    },
+    { property: "og:url", content: absoluteUrl("/privacy") },
+    { property: "og:type", content: "website" },
+  ];
+}
+
+export function links() {
+  return [{ rel: "canonical", href: absoluteUrl("/privacy") }];
+}
+
 export default function PrivacyPage() {
   return (
     <div className="dark-theme-shell mx-auto max-w-4xl px-4 py-12">
-      <Helmet>
-        <title>Privacy Policy | {SITE_NAME}</title>
-        <link rel="canonical" href={absoluteUrl("/privacy")} />
-        <meta
-          name="description"
-          content={`Read the ${SITE_NAME} Privacy Policy, including how account, OAuth, CAPTCHA, analytics, forum, reading list, report, and screenshot data may be used.`}
-        />
-        <meta property="og:title" content={`Privacy Policy | ${SITE_NAME}`} />
-        <meta
-          property="og:description"
-          content={`How ${SITE_NAME}, operated by ${OPERATOR_NAME}, handles account, community, report, and analytics data.`}
-        />
-        <meta property="og:url" content={absoluteUrl("/privacy")} />
-        <meta property="og:type" content="website" />
-      </Helmet>
-
       <h1 className={`text-3xl font-bold ${infoPageHeadingText}`}>
         Privacy Policy
       </h1>

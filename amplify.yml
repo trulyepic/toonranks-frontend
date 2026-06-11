@@ -12,13 +12,16 @@ frontend:
         - echo VITE_RECAPTCHA_SITE_KEY=6Ld96JMrAAAAAOgkEHH4sARr5aHkCone2tYQBCXN >> .env
     build:
       commands:
-        - npm install
+        # --legacy-peer-deps: @react-router/dev declares an optional React Server
+        # Components peer (react-server-dom-webpack) we don't use; skip it.
+        - npm install --legacy-peer-deps
         - npm run build
   artifacts:
-    baseDirectory: dist
+    # React Router framework build outputs the static SPA to build/client
+    # (public/ assets, incl. robots.txt, are copied there automatically).
+    baseDirectory: build/client
     files:
       - "**/*"
-      - public/robots.txt
   cache:
     paths:
       - node_modules/**/*
