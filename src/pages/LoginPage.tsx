@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import ReCAPTCHA from "react-google-recaptcha";
+import { ClientOnly } from "../components/ClientOnly";
 import {
   createMobileAuthCode,
   login,
@@ -206,19 +207,23 @@ const LoginPage = () => {
         </div>
 
         <div className="mt-5 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-3 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))]">
-          <ReCAPTCHA
-            ref={recaptchaRef}
-            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-            onChange={(token) => setCaptchaToken(token || "")}
-            onExpired={() => {
-              setCaptchaToken("");
-              setError("CAPTCHA expired. Please try again.");
-            }}
-            onError={() => {
-              setCaptchaToken("");
-              setError("CAPTCHA failed to load. Please retry.");
-            }}
-          />
+          <ClientOnly>
+            {() => (
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                onChange={(token) => setCaptchaToken(token || "")}
+                onExpired={() => {
+                  setCaptchaToken("");
+                  setError("CAPTCHA expired. Please try again.");
+                }}
+                onError={() => {
+                  setCaptchaToken("");
+                  setError("CAPTCHA failed to load. Please retry.");
+                }}
+              />
+            )}
+          </ClientOnly>
         </div>
 
         <button
@@ -260,11 +265,15 @@ const LoginPage = () => {
             </label>
 
             <div className="mt-4 overflow-x-auto rounded-2xl border border-amber-200 bg-white/80 px-3 py-3 dark:border-amber-700/60 dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))]">
-              <ReCAPTCHA
-                ref={recaptchaRef}
-                sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-                onChange={(t) => setResendCaptcha(t || "")}
-              />
+              <ClientOnly>
+                {() => (
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                    onChange={(t) => setResendCaptcha(t || "")}
+                  />
+                )}
+              </ClientOnly>
             </div>
 
             <button

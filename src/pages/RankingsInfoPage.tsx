@@ -1,4 +1,3 @@
-import { Helmet } from "react-helmet";
 import { absoluteUrl, SITE_NAME } from "../config/site";
 import {
   infoPageBodyText,
@@ -6,25 +5,32 @@ import {
   infoPageMutedText,
 } from "../util/infoPageStyles";
 
+export function meta() {
+  return [
+    { title: `How Rankings Work | ${SITE_NAME}` },
+    {
+      name: "description",
+      content:
+        "Learn how Toon Ranks calculates scores and ranks manga, manhwa, and manhua using user ratings.",
+    },
+    { property: "og:title", content: `How Rankings Work | ${SITE_NAME}` },
+    {
+      property: "og:description",
+      content:
+        "Learn how Toon Ranks calculates community ranking scores for manga, manhwa, and manhua.",
+    },
+    { property: "og:url", content: absoluteUrl("/how-rankings-work") },
+    { property: "og:type", content: "website" },
+  ];
+}
+
+export function links() {
+  return [{ rel: "canonical", href: absoluteUrl("/how-rankings-work") }];
+}
+
 const RankingsInfoPage = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-10 py-10">
-      <Helmet>
-        <title>How Rankings Work | {SITE_NAME}</title>
-        <link rel="canonical" href={absoluteUrl("/how-rankings-work")} />
-        <meta
-          name="description"
-          content="Learn how Toon Ranks calculates scores and ranks manga, manhwa, and manhua using user ratings."
-        />
-        <meta property="og:title" content={`How Rankings Work | ${SITE_NAME}`} />
-        <meta
-          property="og:description"
-          content="Learn how Toon Ranks calculates community ranking scores for manga, manhwa, and manhua."
-        />
-        <meta property="og:url" content={absoluteUrl("/how-rankings-work")} />
-        <meta property="og:type" content="website" />
-      </Helmet>
-
       <h1 className="text-3xl font-bold mb-6 text-blue-500">
         How Rankings Work
       </h1>

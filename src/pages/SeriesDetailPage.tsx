@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useLoaderData } from "react-router-dom";
+import type { LoaderFunctionArgs } from "react-router";
 import SeriesDetail from "../components/SeriesDetail";
 import AddSeriesDetailModal from "../components/AddSeriesDetailModal";
 import {
   getSeriesDetailById,
   getSeriesSummary,
 } from "../api/manApi";
+import type { RankedSeries } from "../api/manApi";
 import { UserIcon } from "lucide-react";
 import { UsersIcon } from "@heroicons/react/24/outline";
 import SeriesDetailShimmer from "../components/SeriesDetailShimmer";
 import type { SeriesDetailData } from "../types/types";
-import { Helmet } from "react-helmet";
 import RatingInfoTooltip from "../components/RatingInfoTooltip";
+import NotFoundPage from "./NotFoundPage";
 import { getDisplayVoteCounts } from "../util/displayVoteCounts";
 import { isAdminRole } from "../util/roleUtils";
 import { useUser } from "../login/useUser";
@@ -20,6 +22,92 @@ import {
   DEFAULT_SOCIAL_IMAGE,
   SITE_NAME,
 } from "../config/site";
+
+// SSR loader: runs on the server for every /series/:id request (any id, including
+// series added since the last deploy), so the synopsis/title/author land in the
+// initial HTML for crawlers. The client also revalidates via the effects below.
+type SeriesLoaderData = {
+  seriesDetail: SeriesDetailData | null;
+  summary: RankedSeries | null;
+};
+
+export async function loader({
+  params,
+}: LoaderFunctionArgs): Promise<SeriesLoaderData> {
+  const id = Number(params.id);
+  if (!Number.isFinite(id)) throw new Response("Not Found", { status: 404 });
+  const [seriesDetail, summary] = await Promise.all([
+    getSeriesDetailById(id).catch(() => null),
+    getSeriesSummary(id).catch(() => null),
+  ]);
+  // A real series has at least a summary; neither = deleted/nonexistent, so
+  // return a proper 404 instead of a soft-404 (empty 200 page).
+  if (!seriesDetail && !summary) {
+    throw new Response("Not Found", { status: 404 });
+  }
+  return { seriesDetail, summary };
+}
+
+function seriesDisplayTitle(data: SeriesLoaderData | undefined, id?: string) {
+  const detail = data?.seriesDetail as unknown as
+    | Record<string, unknown>
+    | undefined;
+  const detailTitle =
+    typeof detail?.["title"] === "string"
+      ? (detail["title"] as string)
+      : typeof detail?.["series_title"] === "string"
+      ? (detail["series_title"] as string)
+      : undefined;
+  return detailTitle ?? data?.summary?.title ?? `Series #${id}`;
+}
+
+export function meta({
+  data,
+  params,
+}: {
+  data?: SeriesLoaderData;
+  params: { id?: string };
+}) {
+  const id = params.id;
+  const detail = data?.seriesDetail;
+  const displayTitle = seriesDisplayTitle(data, id);
+  const description =
+    detail?.synopsis?.slice(0, 150) ??
+    "Explore detailed information and ratings for this manga/manhwa/manhua series.";
+  const image = detail?.series_cover_url || DEFAULT_SOCIAL_IMAGE;
+  const url = absoluteUrl(`/series/${id}`);
+  return [
+    { title: `${displayTitle} | ${SITE_NAME}` },
+    { tagName: "link", rel: "canonical", href: url },
+    { name: "description", content: description },
+    { property: "og:type", content: "article" },
+    { property: "og:title", content: `${displayTitle} | ${SITE_NAME}` },
+    { property: "og:description", content: description },
+    { property: "og:image", content: image },
+    { property: "og:url", content: url },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: `${displayTitle} | ${SITE_NAME}` },
+    { name: "twitter:description", content: description },
+    { name: "twitter:image", content: image },
+    {
+      "script:ld+json": {
+        "@context": "https://schema.org",
+        "@type": "CreativeWorkSeries",
+        name: displayTitle,
+        genre: data?.summary?.genre,
+        author: detail?.author
+          ? { "@type": "Person", name: detail.author }
+          : undefined,
+        creator: detail?.artist
+          ? { "@type": "Person", name: detail.artist }
+          : undefined,
+        image: detail?.series_cover_url || undefined,
+        url,
+        description: detail?.synopsis?.slice(0, 300),
+      },
+    },
+  ];
+}
 
 const dummyData = {
   id: 1,
@@ -49,19 +137,24 @@ const SeriesDetailPage = () => {
   };
   const { title, genre, type, author, artist } = locationState;
 
+  // Seed from the SSR loader so the synopsis/title/author are in the server HTML
+  // (and match the first client render). The effects below still refetch live.
+  const loaderData = useLoaderData() as SeriesLoaderData;
+  const loadedSummary = loaderData?.summary ?? null;
+
   const [showEditModal, setShowEditModal] = useState(false);
   const [series, setSeries] = useState<typeof dummyData>({
     ...dummyData,
     id: Number(id),
-    title: title || dummyData.title,
-    genre: genre || dummyData.genre,
-    type: type || dummyData.type,
-    author: author || dummyData.author,
-    artist: artist || dummyData.artist,
+    title: title || loadedSummary?.title || dummyData.title,
+    genre: genre || loadedSummary?.genre || dummyData.genre,
+    type: type || loadedSummary?.type || dummyData.type,
+    author: author || loadedSummary?.author || dummyData.author,
+    artist: artist || loadedSummary?.artist || dummyData.artist,
   });
 
   const [seriesDetail, setSeriesDetail] = useState<SeriesDetailData | null>(
-    null
+    loaderData?.seriesDetail ?? null
   );
 
   const [ratings, setRatings] = useState<Record<string, number>>({
@@ -72,7 +165,6 @@ const SeriesDetailPage = () => {
     "Drama / Fighting": -1,
   });
 
-  const [counts, setCounts] = useState<Record<string, number>>({});
   const [displayCounts, setDisplayCounts] = useState<Record<string, number>>(
     {}
   );
@@ -165,7 +257,6 @@ const SeriesDetailPage = () => {
         });
 
         const baseCounts = detail.vote_counts || {};
-        setCounts(baseCounts);
         setDisplayCounts(getDisplayVoteCounts(baseCounts, Number(id)));
       } catch (err) {
         console.error("Failed to fetch series detail", err);
@@ -208,81 +299,6 @@ const SeriesDetailPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>{displayTitle} | {SITE_NAME}</title>
-        <meta
-          name="description"
-          content={
-            seriesDetail?.synopsis?.slice(0, 150) ??
-            "Explore detailed information and ratings for this manga/manhwa/manhua series."
-          }
-        />
-        <link rel="canonical" href={absoluteUrl(`/series/${id}`)} />
-        <meta property="og:type" content="article" />
-        <meta property="og:title" content={`${displayTitle} | ${SITE_NAME}`} />
-        <meta
-          property="og:description"
-          content={
-            seriesDetail?.synopsis?.slice(0, 150) ??
-            "Explore detailed information and ratings for this manga/manhwa/manhua series."
-          }
-        />
-        <meta
-          property="og:image"
-          content={
-            seriesDetail?.series_cover_url ||
-            DEFAULT_SOCIAL_IMAGE
-          }
-        />
-        <meta property="og:url" content={absoluteUrl(`/series/${id}`)} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${displayTitle} | ${SITE_NAME}`} />
-        <meta
-          name="twitter:description"
-          content={
-            seriesDetail?.synopsis?.slice(0, 150) ??
-            "Explore detailed information and ratings for this manga/manhwa/manhua series."
-          }
-        />
-        <meta
-          name="twitter:image"
-          content={
-            seriesDetail?.series_cover_url ||
-            DEFAULT_SOCIAL_IMAGE
-          }
-        />
-
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "CreativeWorkSeries",
-            name: displayTitle,
-            genre: series.genre,
-            author: seriesDetail?.author
-              ? { "@type": "Person", name: seriesDetail.author }
-              : undefined,
-            creator: seriesDetail?.artist
-              ? { "@type": "Person", name: seriesDetail.artist }
-              : undefined,
-            image: seriesDetail?.series_cover_url,
-            url: absoluteUrl(`/series/${id}`),
-            description: seriesDetail?.synopsis?.slice(0, 300),
-            aggregateRating:
-              avgScore !== "-"
-                ? {
-                    "@type": "AggregateRating",
-                    ratingValue: Number(avgScore),
-                    bestRating: 10,
-                    ratingCount: Object.values(counts).reduce(
-                      (a, b) => a + b,
-                      0
-                    ),
-                  }
-                : undefined,
-          })}
-        </script>
-      </Helmet>
-
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 lg:px-10">
       {canShowDetailsAction && (
         <div className="mb-4 flex justify-end">
@@ -501,3 +517,9 @@ const RatingCard = ({
 );
 
 export default SeriesDetailPage;
+
+// Renders the friendly 404 page (with a 404 status) when the loader throws for a
+// deleted/nonexistent series.
+export function ErrorBoundary() {
+  return <NotFoundPage />;
+}

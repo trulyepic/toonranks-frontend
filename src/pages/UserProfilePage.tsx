@@ -1,10 +1,66 @@
-import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet";
+import { useEffect, useRef, useState } from "react";
+import { useParams, Link, useNavigate, useLoaderData } from "react-router-dom";
+import type { LoaderFunctionArgs } from "react-router";
 import { getPublicProfile, type PublicProfile } from "../api/manApi";
 import UserAvatar from "../components/UserAvatar";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { SITE_NAME, SITE_ORIGIN } from "../config/site";
+
+type ProfileLoaderData = { profile: PublicProfile | null; notFound: boolean };
+
+// SSR loader: fetch the public profile on the server so it's in the initial HTML.
+export async function loader({
+  params,
+}: LoaderFunctionArgs): Promise<ProfileLoaderData> {
+  const username = params.username;
+  if (!username) return { profile: null, notFound: true };
+  try {
+    const profile = await getPublicProfile(username);
+    return { profile, notFound: false };
+  } catch (err) {
+    const status = (err as { response?: { status?: number } })?.response
+      ?.status;
+    // 404 -> render the not-found state (noindex). Other errors -> let the
+    // client retry rather than baking a wrong "not found" into the HTML.
+    return { profile: null, notFound: status === 404 };
+  }
+}
+
+export function meta({
+  data,
+  params,
+}: {
+  data?: ProfileLoaderData;
+  params: { username?: string };
+}) {
+  const username = params.username;
+  if (data?.notFound) {
+    return [
+      { title: `User not found — ${SITE_NAME}` },
+      { name: "robots", content: "noindex, nofollow" },
+    ];
+  }
+  const profile = data?.profile;
+  const title = profile
+    ? `${profile.username} — ${SITE_NAME}`
+    : `User profile — ${SITE_NAME}`;
+  return [
+    { title },
+    {
+      tagName: "link",
+      rel: "canonical",
+      href: `${SITE_ORIGIN}/user/${username ?? ""}`,
+    },
+    ...(profile
+      ? [
+          {
+            name: "description",
+            content: `View ${profile.username}'s profile on ${SITE_NAME}.`,
+          },
+        ]
+      : []),
+  ];
+}
 
 function roleLabel(role: string): string {
   const r = (role || "").toUpperCase();
@@ -25,12 +81,27 @@ function formatJoinDate(iso: string | null): string {
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const loaderData = useLoaderData() as ProfileLoaderData | null;
+  const [profile, setProfile] = useState<PublicProfile | null>(
+    loaderData?.profile ?? null
+  );
+  const [loading, setLoading] = useState(
+    !loaderData?.profile && !loaderData?.notFound
+  );
+  const [notFound, setNotFound] = useState(Boolean(loaderData?.notFound));
+
+  // Skip the first client fetch when the server already provided this profile —
+  // avoids a skeleton flash on hydration. Subsequent username changes refetch.
+  const skipInitialFetch = useRef(
+    Boolean(loaderData?.profile || loaderData?.notFound)
+  );
 
   useEffect(() => {
     if (!username) return;
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
     setLoading(true);
     setNotFound(false);
     setProfile(null);
@@ -42,16 +113,10 @@ export default function UserProfilePage() {
       .finally(() => setLoading(false));
   }, [username]);
 
-  const canonical = `${SITE_ORIGIN}/user/${username ?? ""}`;
-  const pageTitle = profile
-    ? `${profile.username} — ${SITE_NAME}`
-    : `User profile — ${SITE_NAME}`;
-
   /* ── Loading skeleton ────────────────────────────────────────────────── */
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-        <Helmet><title>{pageTitle}</title></Helmet>
         <div className="animate-pulse space-y-6">
           <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white dark:border-[#342b24] dark:bg-[#1b1612]">
             <div className="h-2 w-full bg-slate-200 dark:bg-[#2e2520]" />
@@ -81,10 +146,6 @@ export default function UserProfilePage() {
   if (notFound || !profile) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-24 text-center sm:px-6">
-        <Helmet>
-          <title>User not found — {SITE_NAME}</title>
-          <meta name="robots" content="noindex, nofollow" />
-        </Helmet>
         <p className="text-5xl">😶</p>
         <h1 className="mt-5 text-2xl font-bold text-slate-900 dark:text-white">
           User not found
@@ -109,12 +170,6 @@ export default function UserProfilePage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
-      <Helmet>
-        <title>{pageTitle}</title>
-        <link rel="canonical" href={canonical} />
-        <meta name="description" content={`View ${profile.username}'s profile on ${SITE_NAME}.`} />
-      </Helmet>
-
       {/* ── Header card ──────────────────────────────────────────────────── */}
       <div className="mb-6 overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)] dark:border-[#342b24] dark:bg-[linear-gradient(135deg,rgba(27,22,18,0.98),rgba(20,16,13,0.97)_60%,rgba(18,28,23,0.72))] dark:shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
         {/* Role-coloured accent strip */}

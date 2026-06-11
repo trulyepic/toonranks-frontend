@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLoaderData } from "react-router-dom";
 import ManCard from "../components/ManCard";
 import AddSeriesModal from "../components/AddSeriesModal";
 import EditSeriesModal from "../components/EditSeriesModal";
@@ -15,7 +16,6 @@ import {
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useSearch } from "../components/useSearch";
 import ShimmerLoader from "../components/ShimmerLoader";
-import { Helmet } from "react-helmet";
 import CompareManager from "../components/CompareManager";
 import { useUser } from "../login/useUser";
 import ReadingListModal from "../components/ReadingListModal";
@@ -32,10 +32,75 @@ import {
 
 const PAGE_SIZE = 25;
 
+export function meta() {
+  return [
+    { title: `${SITE_NAME} | Top Manga, Manhwa, and Manhua` },
+    {
+      name: "description",
+      content:
+        "Browse the top-ranked Manga, Manhwa, and Manhua. Vote, review, and explore amazing series on Toon Ranks!",
+    },
+    {
+      property: "og:title",
+      content: `${SITE_NAME} | Top Manga, Manhwa, and Manhua`,
+    },
+    {
+      property: "og:description",
+      content: "Vote, review, and explore top-rated manga and webtoons!",
+    },
+    { property: "og:image", content: DEFAULT_SOCIAL_IMAGE },
+    { property: "og:url", content: absoluteUrl("/") },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: SITE_NAME },
+    {
+      name: "twitter:description",
+      content: "Discover and rate the best manga, manhwa, and manhua.",
+    },
+    { name: "twitter:image", content: DEFAULT_SOCIAL_IMAGE },
+    {
+      "script:ld+json": {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: SITE_NAME,
+        url: SITE_ORIGIN,
+        publisher: {
+          "@type": "Organization",
+          name: OPERATOR_NAME,
+        },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${SITE_ORIGIN}/?search={search_term_string}`,
+          "query-input": "required name=search_term_string",
+        },
+      },
+    },
+  ];
+}
+
+export function links() {
+  return [{ rel: "canonical", href: absoluteUrl("/") }];
+}
+
+// SSR loader: fetch the first page of rankings on the server so the homepage's
+// series cards are in the initial HTML. The client revalidates + paginates.
+export async function loader() {
+  const items = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
+    sort: "score",
+  }).catch(() => [] as RankedSeries[]);
+  return { items };
+}
+
 const Home = () => {
+  const initialItems =
+    (useLoaderData() as { items?: RankedSeries[] } | null)?.items ?? [];
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Series | null>(null);
-  const [items, setItems] = useState<RankedSeries[]>([]);
+  const [items, setItems] = useState<RankedSeries[]>(initialItems);
+  // Skip the first client load when the server already seeded page 1 (default
+  // filters), so we don't clear the SSR cards on hydration. Search/filter
+  // changes still reset + refetch.
+  const skipInitialLoad = useRef(initialItems.length > 0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -212,6 +277,10 @@ const Home = () => {
   // modes: searching uses the search endpoint; otherwise genre + status compose
   // server-side on the rankings endpoint.
   useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
     const fetchData = async () => {
       if (searchTerm.trim()) {
         try {
@@ -267,58 +336,6 @@ const Home = () => {
   // console.log("Items:", items);
   return (
     <>
-      <Helmet>
-        <title>{SITE_NAME} | Top Manga, Manhwa, and Manhua</title>
-        <meta
-          name="description"
-          content="Browse the top-ranked Manga, Manhwa, and Manhua. Vote, review, and explore amazing series on Toon Ranks!"
-        />
-        <meta
-          property="og:title"
-          content={`${SITE_NAME} | Top Manga, Manhwa, and Manhua`}
-        />
-        <meta
-          property="og:description"
-          content="Vote, review, and explore top-rated manga and webtoons!"
-        />
-        <meta
-          property="og:image"
-          content={DEFAULT_SOCIAL_IMAGE}
-        />
-        <meta property="og:url" content={absoluteUrl("/")} />
-        <meta property="og:type" content="website" />
-
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={SITE_NAME} />
-        <meta
-          name="twitter:description"
-          content="Discover and rate the best manga, manhwa, and manhua."
-        />
-        <meta
-          name="twitter:image"
-          content={DEFAULT_SOCIAL_IMAGE}
-        />
-
-        <link rel="canonical" href={absoluteUrl("/")} />
-
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            name: SITE_NAME,
-            url: SITE_ORIGIN,
-            publisher: {
-              "@type": "Organization",
-              name: OPERATOR_NAME,
-            },
-            potentialAction: {
-              "@type": "SearchAction",
-              target: `${SITE_ORIGIN}/?search={search_term_string}`,
-              "query-input": "required name=search_term_string",
-            },
-          })}
-        </script>
-      </Helmet>
 
       <div className="mx-auto w-full max-w-7xl px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">

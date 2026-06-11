@@ -1162,6 +1162,7 @@ export const deleteReadingList = async (listId: number): Promise<void> => {
 
 // ---------- Session helpers ----------
 export const getCurrentUser = (): AuthUser | null => {
+  if (typeof window === "undefined") return null; // SSR: no auth on the server
   const user = localStorage.getItem("user");
   if (!user) return null;
   try {

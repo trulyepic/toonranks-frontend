@@ -1,5 +1,10 @@
 # UAT Environment Setup (Frontend)
 
+> ⚠️ **HISTORICAL / OUTDATED.** This describes the old **AWS Amplify** UAT setup, retired
+> during the 2026 SSR migration. The frontend now runs as a Node SSR app on **Railway**,
+> and `uat.toonranks.com` is a custom domain on the same Railway service as production.
+> See **`docs/DEPLOYMENT.md`** for the current setup. Kept for reference only.
+
 Living runbook for standing up a **UAT (user-acceptance testing) frontend** so we can test new
 frontend changes on a separate URL **without touching the production site** — while still using the
 **same production backend and database**.

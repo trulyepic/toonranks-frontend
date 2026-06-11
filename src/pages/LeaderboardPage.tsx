@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet";
+import { Link, useLoaderData } from "react-router-dom";
 import {
   getLeaderboard,
   type LeaderboardUser,
@@ -11,6 +10,23 @@ import { inlineUsernameClassName } from "../util/userDisplay";
 import { SITE_NAME } from "../config/site";
 
 const PAGE_SIZE = 50;
+
+// SSR loader: fetch page 1 of the leaderboard on the server so the rankings are
+// in the initial HTML. The client revalidates + paginates.
+export async function loader() {
+  const result = await getLeaderboard(1, PAGE_SIZE).catch(() => null);
+  return { result };
+}
+
+export function meta() {
+  return [
+    { title: `Rankers — ${SITE_NAME}` },
+    {
+      name: "description",
+      content: `See the top community contributors on ${SITE_NAME}, ranked by Cred Points earned through forum upvotes and series ratings.`,
+    },
+  ];
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -179,10 +195,17 @@ function LeaderboardSkeleton() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LeaderboardPage() {
-  const [result, setResult] = useState<LeaderboardPageOut | null>(null);
-  const [topThree, setTopThree] = useState<LeaderboardUser[]>([]);
+  const initialResult =
+    (useLoaderData() as { result?: LeaderboardPageOut | null } | null)
+      ?.result ?? null;
+  const [result, setResult] = useState<LeaderboardPageOut | null>(
+    initialResult
+  );
+  const [topThree, setTopThree] = useState<LeaderboardUser[]>(
+    initialResult?.items.slice(0, 3) ?? []
+  );
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialResult);
 
   useEffect(() => {
     setLoading(true);
@@ -218,18 +241,8 @@ export default function LeaderboardPage() {
           position: (i + 1) as 1 | 2 | 3,
         }));
 
-  const pageTitle = `Rankers — ${SITE_NAME}`;
-
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-      <Helmet>
-        <title>{pageTitle}</title>
-        <meta
-          name="description"
-          content={`See the top community contributors on ${SITE_NAME}, ranked by Cred Points earned through forum upvotes and series ratings.`}
-        />
-      </Helmet>
-
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
