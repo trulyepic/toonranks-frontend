@@ -93,3 +93,33 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  deploy-uat:
+    name: Deploy to UAT (Railway)
+    runs-on: ubuntu-latest
+    # Auto-deploys the `uat` branch to the UAT Railway service
+    # (uat.toonranks.com), but only after all checks pass. Railway's own
+    # auto-deploy is disabled on that service so this job is the single deploy
+    # path, with the build/deploy logs streamed here in the Actions run.
+    # Production (www) deploys separately via the manual "Deploy to Production
+    # (Railway)" workflow.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/uat'
+    needs:
+      - lint
+      - unit-tests
+      - browser-smoke-tests
+      - build
+
+    steps:
+      - name: Checkout uat
+        uses: actions/checkout@v4
+        with:
+          ref: uat
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy uat to the UAT service
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service "toonranks-frontend UAT" --ci
