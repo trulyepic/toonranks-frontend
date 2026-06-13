@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLoaderData } from "react-router-dom";
+import { Link, useLoaderData } from "react-router-dom";
 import ManCard from "../components/ManCard";
 import AddSeriesModal from "../components/AddSeriesModal";
 import EditSeriesModal from "../components/EditSeriesModal";
@@ -338,6 +338,37 @@ const Home = () => {
     <>
 
       <div className="mx-auto w-full max-w-7xl px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
+        {/* Compact intro for first-time / logged-out visitors: says what the site
+            is and gives a clear next step. Hidden once signed in so regulars go
+            straight to the rankings. Also puts real above-the-fold copy (h1) in
+            the server HTML for SEO. */}
+        {!user && (
+          <section className="mb-4 rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_40%),linear-gradient(135deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.95))] px-5 py-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell sm:px-8 sm:py-7">
+            <h1 className="max-w-2xl text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
+              Rank, compare, and keep up with the series worth your time.
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-[15px]">
+              Community-driven rankings for manga, manhwa, and manhua — rate
+              what you've read, track what you're reading, and find your next
+              series.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2.5">
+              <Link
+                to="/signup"
+                className="rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              >
+                Join free
+              </Link>
+              <Link
+                to="/how-rankings-work"
+                className="rounded-full border border-slate-200 bg-white/80 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark-theme-chip dark:text-slate-200 dark:hover:bg-[#241d19]"
+              >
+                How rankings work
+              </Link>
+            </div>
+          </section>
+        )}
+
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">
           <RankingsToolbar
             contextLabel="Rankings"
