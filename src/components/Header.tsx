@@ -50,7 +50,6 @@ const Header = () => {
   const isAdmin = isAdminUser(user);
   const canSubmit = canSubmitSeriesUser(user);
 
-  const [showSearch, setShowSearch] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileSearchQuery, setMobileSearchQuery] = useState("");
@@ -78,9 +77,6 @@ const Header = () => {
     navigate("/");
   };
 
-  const handleSearchClick = () => {
-    setShowSearch((prev) => !prev);
-  };
 
   const closeMobileSearch = () => {
     mobileSearchControllerRef.current?.abort();
@@ -319,21 +315,19 @@ const Header = () => {
         </div>
 
         <div className="hidden items-center gap-3 sm:flex">
+          {/* Search is a core discovery action, so it's always visible on desktop
+              (was a collapse-on-click icon). */}
           <form onSubmit={handleSearchSubmit} className="relative">
             <input
               type="text"
-              className={`h-10 rounded-full border border-slate-200 bg-slate-50 pl-4 pr-11 text-sm text-slate-700 shadow-sm outline-none transition-all duration-300 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-200 dark-theme-field dark:focus:bg-[#181310] dark:focus:ring-[#2a221c] ${
-                showSearch
-                  ? "w-56 opacity-100"
-                  : "pointer-events-none w-0 border-transparent px-0 opacity-0"
-              }`}
+              className="h-10 w-52 rounded-full border border-slate-200 bg-slate-50 pl-4 pr-11 text-sm text-slate-700 shadow-sm outline-none transition-all duration-200 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-200 dark-theme-field dark:focus:bg-[#181310] dark:focus:ring-[#2a221c] lg:w-64"
               placeholder="Search titles..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Search titles"
             />
             <button
-              type={showSearch ? "submit" : "button"}
-              onClick={!showSearch ? handleSearchClick : undefined}
+              type="submit"
               className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-[#241d19] dark:hover:text-white"
               aria-label="Search"
             >
