@@ -109,8 +109,9 @@ export default function RankingsToolbar({
         {rightSlot}
       </div>
 
-      {/* Row 2: the refinement controls + active chips */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Row 2: the refinement controls + active chips. On mobile this is a single
+          horizontally-scrollable row (no wrapping/stacking); on sm+ it wraps. */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 [&>*]:shrink-0 sm:flex-wrap sm:overflow-visible sm:pb-0 no-scrollbar">
         <FilterSelect
           label="Genre"
           value={activeGenre ?? ""}
