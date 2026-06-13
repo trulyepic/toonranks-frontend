@@ -374,9 +374,18 @@ const SeriesDetailPage = () => {
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 ring-1 ring-inset ring-slate-200 dark-theme-chip dark:text-slate-300">
                         {series.type}
                       </span>
-                      <span className="inline-block max-w-full whitespace-normal rounded-[24px] bg-blue-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-900">
-                        {series.genre}
-                      </span>
+                      {String(series.genre || "")
+                        .split(",")
+                        .map((g) => g.trim())
+                        .filter(Boolean)
+                        .map((g) => (
+                          <span
+                            key={g}
+                            className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-900"
+                          >
+                            {g}
+                          </span>
+                        ))}
                     </div>
 
                     <h1 className="mt-4 break-words text-3xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-4xl">
@@ -443,15 +452,17 @@ const SeriesDetailPage = () => {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                {Object.entries(ratings).map(([label, score]) => (
-                  <RatingCard
-                    key={label}
-                    label={label}
-                    score={score}
-                    count={displayCounts[label]}
-                  />
-                ))}
+              <div className="rounded-[24px] border border-slate-200 bg-white/95 p-5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.4)] dark-theme-card dark:shadow-[0_18px_40px_-34px_rgba(0,0,0,0.82)] sm:p-6">
+                <div className="space-y-4 sm:space-y-5">
+                  {Object.entries(ratings).map(([label, score]) => (
+                    <RatingBar
+                      key={label}
+                      label={label}
+                      score={score}
+                      count={displayCounts[label]}
+                    />
+                  ))}
+                </div>
               </div>
             </section>
 
@@ -488,7 +499,7 @@ const SeriesDetailPage = () => {
   );
 };
 
-const RatingCard = ({
+const RatingBar = ({
   label,
   score,
   count,
@@ -496,25 +507,43 @@ const RatingCard = ({
   label: string;
   score: number;
   count?: number;
-}) => (
-  <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/95 p-5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.4)] dark-theme-card dark:shadow-[0_18px_40px_-34px_rgba(0,0,0,0.82)]">
-    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</h3>
-    <p className="mt-3 text-3xl font-semibold tracking-tight text-blue-500">
-      {score === -1 ? "-" : score.toFixed(1)}
-      <span className="ml-1 text-base font-medium text-slate-400 dark:text-slate-500">/10</span>
-    </p>
-    {count !== undefined && (
-      <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-200 dark-theme-chip dark:text-slate-300">
-        {count > 1 ? (
-          <UsersIcon className="h-4 w-4 text-blue-400" />
-        ) : (
-          <UserIcon className="h-4 w-4 text-blue-400" />
-        )}
-        {count}
+}) => {
+  const hasScore = score !== -1;
+  const pct = hasScore ? Math.max(0, Math.min(100, (score / 10) * 100)) : 0;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {label}
+        </h3>
+        <div className="flex items-center gap-2.5">
+          {count !== undefined && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 dark:text-slate-500">
+              {count > 1 ? (
+                <UsersIcon className="h-3.5 w-3.5 text-blue-400" />
+              ) : (
+                <UserIcon className="h-3.5 w-3.5 text-blue-400" />
+              )}
+              {count}
+            </span>
+          )}
+          <span className="text-sm font-bold tabular-nums text-blue-500">
+            {hasScore ? score.toFixed(1) : "-"}
+            <span className="ml-0.5 text-xs font-medium text-slate-400 dark:text-slate-500">
+              /10
+            </span>
+          </span>
+        </div>
       </div>
-    )}
-  </div>
-);
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-[#241d19]">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+};
 
 export default SeriesDetailPage;
 
