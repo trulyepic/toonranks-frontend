@@ -121,7 +121,10 @@ export default function Root() {
           <SearchProvider>
             <div className="flex flex-col min-h-screen">
               <Header />
-              <main className="flex-grow bg-[linear-gradient(180deg,_#f8fafc_0%,_#ffffff_18%,_#ffffff_100%)] transition-colors dark:bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.08),_transparent_18%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.04),_transparent_18%),linear-gradient(180deg,_#18120f_0%,_#120f0d_18%,_#171210_100%)]">
+              {/* Light bg slightly deeper than the white cards (with a faint blue
+                  cast up top) so cards read as elevated surfaces instead of
+                  white-on-white. Dark bg unchanged. */}
+              <main className="flex-grow bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.05),_transparent_30%),linear-gradient(180deg,_#eef2f7_0%,_#f4f7fa_40%,_#f8fafc_100%)] transition-colors dark:bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.08),_transparent_18%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.04),_transparent_18%),linear-gradient(180deg,_#18120f_0%,_#120f0d_18%,_#171210_100%)]">
                 <Outlet />
                 <SessionExpiredModal
                   open={showExpired}

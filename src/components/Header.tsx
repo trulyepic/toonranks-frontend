@@ -12,7 +12,7 @@ import { BookmarkIcon } from "lucide-react";
 import { useSearch } from "./useSearch";
 import { useUser } from "../login/useUser";
 import SocialLinks from "./SocialLinks";
-import myHomeLogo from "../images/logo/myHomeLogo.png";
+import Logo from "./Logo";
 import { useTheme } from "./useTheme";
 import { canSubmitSeriesUser, isAdminUser } from "../util/roleUtils";
 import { searchSeries, type RankedSeries } from "../api/manApi";
@@ -239,11 +239,8 @@ const Header = () => {
             className="flex items-center gap-3 rounded-full pr-1 transition hover:opacity-90"
             aria-label="Go to homepage"
           >
-            <img
-              src={myHomeLogo}
-              alt="Toon Ranks Logo"
-              className="h-11 w-11 object-contain"
-            />
+            <Logo />
+            <span className="sr-only">Toon Ranks</span>
           </a>
 
           <nav className="hidden items-center gap-2 sm:flex">
