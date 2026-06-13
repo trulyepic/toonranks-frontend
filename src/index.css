@@ -1,3 +1,8 @@
+/* Self-hosted variable fonts (no external requests): Inter for body/UI,
+   Manrope for headings. Wired into Tailwind via fontFamily in tailwind.config.js. */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/manrope";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,7 +14,15 @@ body,
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased transition-colors dark:bg-[#15110f] dark:text-[#f4efe8];
+  @apply bg-slate-50 font-sans text-slate-900 antialiased transition-colors dark:bg-[#15110f] dark:text-[#f4efe8];
+}
+
+/* Headings use the display font with slightly tighter tracking for a more
+   intentional, modern feel. Components can override per-element if needed. */
+h1,
+h2,
+h3 {
+  @apply font-display tracking-tight;
 }
 
 @layer components {
