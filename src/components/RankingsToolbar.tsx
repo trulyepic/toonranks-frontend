@@ -103,7 +103,7 @@ export default function RankingsToolbar({
             {contextLabel}
           </span>
           <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-200 dark-theme-chip dark:text-slate-300 sm:px-3 sm:py-1.5 sm:text-sm">
-            {loadedCount} loaded
+            Showing {loadedCount} series
           </span>
         </div>
         {rightSlot}

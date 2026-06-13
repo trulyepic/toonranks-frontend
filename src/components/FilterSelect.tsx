@@ -51,7 +51,7 @@ export default function FilterSelect({ label, value, options, onChange }: Props)
         aria-expanded={open}
         className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-[#3a3028] dark:bg-[#1e1712] dark:text-slate-200 dark:hover:bg-[#241d19] sm:py-2"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
           {label}
         </span>
         {selected?.dot ? (
