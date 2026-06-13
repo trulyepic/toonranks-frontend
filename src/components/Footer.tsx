@@ -55,13 +55,8 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="/issues" className={footerLinkClass}>
-                  Issues
-                </a>
-              </li>
-              <li>
                 <a href="/how-rankings-work" className={footerLinkClass}>
-                  Ranks
+                  How Rankings Work
                 </a>
               </li>
               <li>

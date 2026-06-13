@@ -90,6 +90,12 @@ const ManCard = ({
   const showVotes = votes >= 10;
   const showListBtn = !!onAddToReadingList;
   const showCompareBtn = !!onCompareToggle;
+  // Many series have the same person as author and artist; showing the name
+  // twice is noise, so collapse to a single row in that case.
+  const sameCreator =
+    !!author &&
+    !!artist &&
+    author.trim().toLowerCase() === artist.trim().toLowerCase();
 
   const ListButton = () => (
     <button
@@ -153,6 +159,8 @@ const ManCard = ({
               ref={imgRef}
               src={coverUrl}
               alt={`Cover for ${title}`}
+              loading="lazy"
+              decoding="async"
               onLoad={() => setImageLoaded(true)}
               className={`h-full w-full object-cover transition duration-500 ${
                 imageLoaded
@@ -196,7 +204,7 @@ const ManCard = ({
             {author && (
               <p
                 className="flex items-center gap-1 text-[13px] text-gray-600 dark:text-slate-300 sm:gap-1.5 sm:text-sm"
-                title={author}
+                title={sameCreator ? `Author & Artist: ${author}` : author}
               >
                 <Pencil className="h-4 w-4 flex-shrink-0 text-gray-700 dark:text-slate-400" />
                 <span
@@ -208,7 +216,7 @@ const ManCard = ({
               </p>
             )}
 
-            {artist && (
+            {artist && !sameCreator && (
               <p
                 className="flex items-center gap-1 text-[13px] text-gray-600 dark:text-slate-300 sm:gap-1.5 sm:text-sm"
                 title={artist}
@@ -238,10 +246,10 @@ const ManCard = ({
                     onCompareToggle?.();
                   }}
                   title="Select to Compare"
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold sm:text-xs ${
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold transition sm:text-xs ${
                     isCompared
                       ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-700 dark:bg-[linear-gradient(145deg,_rgba(35,28,24,0.95),_rgba(24,19,16,0.95))] dark:text-slate-200"
+                      : "border border-gray-300 bg-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:border-[#3a3028] dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-200"
                   }`}
                 >
                   {isCompared ? "✓" : "+"} Compare
@@ -258,10 +266,10 @@ const ManCard = ({
                       onCompareToggle?.();
                     }}
                     title="Select to Compare"
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold sm:text-xs ${
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold transition sm:text-xs ${
                       isCompared
                         ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700 dark:bg-[linear-gradient(145deg,_rgba(35,28,24,0.95),_rgba(24,19,16,0.95))] dark:text-slate-200"
+                        : "border border-gray-300 bg-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:border-[#3a3028] dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-200"
                     }`}
                   >
                     {isCompared ? "✓" : "+"} Compare
