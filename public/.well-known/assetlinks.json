@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.toonranks.mobile",
+      "sha256_cert_fingerprints": [
+        "ED:D9:AE:7D:0A:9B:AF:DB:B2:1A:65:0E:53:A2:BE:4C:6B:DE:F4:6E:79:1F:65:B3:B2:16:E2:7E:50:16:34:B6"
+      ]
+    }
+  }
+]
