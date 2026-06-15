@@ -82,7 +82,7 @@ export default function AndroidAppBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Get the Toon Ranks Android app"
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-8px_32px_-8px_rgba(15,23,42,0.12)] backdrop-blur-sm dark:border-[#322922]/80 dark:bg-[#18120f]/95"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[calc(0.75rem_+_env(safe-area-inset-bottom))] shadow-[0_-8px_32px_-8px_rgba(15,23,42,0.12)] backdrop-blur-sm dark:border-[#322922]/80 dark:bg-[#18120f]/95"
     >
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">

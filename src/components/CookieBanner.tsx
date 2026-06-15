@@ -94,7 +94,7 @@ export default function CookieBanner() {
         role="dialog"
         aria-live="polite"
         aria-label="Cookie consent"
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-4 py-4 shadow-[0_-8px_32px_-8px_rgba(15,23,42,0.12)] backdrop-blur-sm dark:border-[#322922]/80 dark:bg-[#18120f]/95"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-4 pt-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] shadow-[0_-8px_32px_-8px_rgba(15,23,42,0.12)] backdrop-blur-sm dark:border-[#322922]/80 dark:bg-[#18120f]/95"
       >
         <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
