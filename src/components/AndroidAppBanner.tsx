@@ -87,7 +87,7 @@ export default function AndroidAppBanner() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <img
-            src="/android-chrome-192x192.png"
+            src="/toonranks-app-icon.png"
             alt=""
             aria-hidden="true"
             className="h-9 w-9 shrink-0 rounded-lg"

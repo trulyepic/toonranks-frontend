@@ -12,6 +12,7 @@ import {
 import { ForumActivitySection } from "../components/ForumActivitySection";
 import { FavouritesSection } from "../components/FavouritesSection";
 import { SeriesRatingsSection } from "../components/SeriesRatingsSection";
+import { GetAndroidAppCard } from "../components/GetAndroidAppCard";
 import UserAvatar from "../components/UserAvatar";
 import { NoIndexSeo } from "../components/Seo";
 import { useUser } from "../login/useUser";
@@ -571,6 +572,7 @@ export default function AccountPage() {
       <FavouritesSection />
       <ForumActivitySection />
       <SeriesRatingsSection />
+      <GetAndroidAppCard />
 
       {/* ── Username change modal ─────────────────────────────────────────── */}
       {usernameModalOpen && (
