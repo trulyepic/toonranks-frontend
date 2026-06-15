@@ -14,6 +14,7 @@ import { SearchProvider } from "./components/SearchContext";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieBanner from "./components/CookieBanner";
+import AndroidAppBanner from "./components/AndroidAppBanner";
 import { SessionExpiredModal } from "./components/SessionExpiredModal";
 import "./index.css";
 
@@ -133,6 +134,7 @@ export default function Root() {
               </main>
               <Footer />
               <CookieBanner />
+              <AndroidAppBanner />
             </div>
           </SearchProvider>
         </UserProvider>
