@@ -76,7 +76,7 @@ describe("AccountPage", () => {
       avatar_preset: "blue",
     });
 
-    await screen.findByText(/forum activity/i);
+    await screen.findByRole("heading", { name: /forum activity/i });
 
     expect(screen.getByRole("button", { name: /threads/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /replies/i })).toBeInTheDocument();
