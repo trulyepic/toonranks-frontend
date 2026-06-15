@@ -1,5 +1,5 @@
 import SocialLinks from "./SocialLinks";
-import { OPERATOR_NAME, SITE_NAME } from "../config/site";
+import { OPERATOR_NAME, PLAY_STORE_URL, SITE_NAME } from "../config/site";
 
 const footerLinkClass =
   "rounded-full px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-[#241d19] dark:hover:text-white";
@@ -67,6 +67,24 @@ const Footer = () => {
               <li>
                 <a href="/privacy" className={footerLinkClass}>
                   Privacy
+                </a>
+              </li>
+              <li>
+                <a
+                  href={PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 512 512"
+                    className="h-3.5 w-3.5"
+                    fill="currentColor"
+                  >
+                    <path d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z" />
+                  </svg>
+                  Get the Android app
                 </a>
               </li>
             </ul>
