@@ -182,7 +182,7 @@ const ManCard = ({
             ) : null}
           </div>
 
-          <div className="mt-3 flex flex-1 flex-col space-y-2 px-2 pb-2 sm:mt-4 sm:px-2.5">
+          <div className="mt-3 flex flex-1 flex-col gap-2 px-2 pb-2 sm:mt-4 sm:px-2.5">
             <h2 className="line-clamp-2 min-h-[2.6rem] w-full text-[15px] font-semibold leading-5 text-slate-900 dark:text-white sm:text-base sm:leading-normal" title={title}>
               {title}
             </h2>
@@ -231,7 +231,7 @@ const ManCard = ({
               </p>
             )}
 
-            <div className="mt-3 flex flex-wrap items-center gap-y-2 text-sm text-gray-700 dark:text-slate-300">
+            <div className="mt-auto flex flex-wrap items-center gap-y-2 pt-1 text-sm text-gray-700 dark:text-slate-300">
               {showVotes ? (
                 <div className="flex items-center space-x-1">
                   <UserIcon className="h-3.5 w-3.5 text-blue-400" />
