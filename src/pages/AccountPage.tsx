@@ -6,6 +6,7 @@ import {
   getPublicProfile,
   resetMyAvatar,
   selectMyAvatarPreset,
+  updateMyPrivacy,
   uploadMyAvatar,
   updateMyUsername,
 } from "../api/manApi";
@@ -125,6 +126,28 @@ export default function AccountPage() {
   const [usernameInput, setUsernameInput] = useState("");
   const [usernameSaving, setUsernameSaving] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+
+  // Public-profile visibility toggles
+  const [privacySaving, setPrivacySaving] = useState(false);
+
+  async function handlePrivacyToggle(
+    key: "public_ratings" | "public_posts",
+    value: boolean
+  ) {
+    if (!user) return;
+    const prev = user[key] ?? true;
+    // Optimistic: update the stored user immediately, revert if the API fails.
+    saveUser({ ...user, [key]: value }, setUser);
+    setPrivacySaving(true);
+    try {
+      await updateMyPrivacy({ [key]: value });
+    } catch {
+      saveUser({ ...user, [key]: prev }, setUser);
+      toast.error("Couldn't update your privacy setting. Please try again.");
+    } finally {
+      setPrivacySaving(false);
+    }
+  }
 
   // Keep draftRef in sync so the wheel handler can read it without a stale closure
   draftRef.current = draft;
@@ -569,6 +592,31 @@ export default function AccountPage() {
         </section>
       </div>
 
+      <section className="mt-8 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark-theme-card">
+        <h2 className="text-2xl font-black text-slate-950 dark:text-white">
+          Privacy
+        </h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Choose what shows on your public profile.
+        </p>
+        <div className="mt-5 space-y-4">
+          <PrivacyToggleRow
+            label="Show my ratings"
+            description="Display the series you've rated on your public profile."
+            checked={user.public_ratings ?? true}
+            disabled={privacySaving}
+            onChange={(v) => handlePrivacyToggle("public_ratings", v)}
+          />
+          <PrivacyToggleRow
+            label="Show my forum posts"
+            description="Display your recent forum posts on your public profile."
+            checked={user.public_posts ?? true}
+            disabled={privacySaving}
+            onChange={(v) => handlePrivacyToggle("public_posts", v)}
+          />
+        </div>
+      </section>
+
       <FavouritesSection />
       <ForumActivitySection />
       <SeriesRatingsSection />
@@ -649,6 +697,53 @@ export default function AccountPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PrivacyToggleRow({
+  label,
+  description,
+  checked,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+          {label}
+        </p>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+          {description}
+        </p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={[
+          "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+          checked ? "bg-blue-600 dark:bg-blue-500" : "bg-slate-200 dark:bg-[#3a3028]",
+        ].join(" ")}
+      >
+        <span
+          className={[
+            "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+            checked ? "translate-x-5" : "translate-x-0",
+          ].join(" ")}
+        />
+      </button>
     </div>
   );
 }
