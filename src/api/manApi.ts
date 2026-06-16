@@ -587,6 +587,10 @@ export interface AuthUser extends AvatarFields {
   username: string;
   email?: string | null;
   role?: UserRole | null;
+  // Public-profile visibility toggles (default true). Optional so older stored
+  // sessions without these fields still type-check.
+  public_ratings?: boolean;
+  public_posts?: boolean;
 }
 export interface AdminUser extends AuthUser {
   is_verified: boolean;
@@ -1982,6 +1986,22 @@ export interface ProfileReadingList {
   share_token: string;
 }
 
+export interface PublicSeriesRating {
+  series_id: number;
+  title: string | null;
+  cover_url: string | null;
+  type: SeriesType | null;
+  score: number;
+}
+
+export interface PublicForumPost {
+  post_id: number;
+  thread_id: number;
+  thread_title: string | null;
+  excerpt: string;
+  created_at: string;
+}
+
 export interface PublicProfile {
   username: string;
   role: string;
@@ -1993,12 +2013,27 @@ export interface PublicProfile {
   post_count: number;
   favourites: PublicFavourite[];
   reading_lists: ProfileReadingList[];
+  // null when the user has hidden that section (vs [] = public but empty).
+  ratings?: PublicSeriesRating[] | null;
+  posts?: PublicForumPost[] | null;
 }
 
 export const getPublicProfile = async (
   username: string
 ): Promise<PublicProfile> => {
   const res = await api.get<PublicProfile>(`/users/${username}`);
+  return res.data;
+};
+
+export interface PrivacySettings {
+  public_ratings: boolean;
+  public_posts: boolean;
+}
+
+export const updateMyPrivacy = async (
+  payload: Partial<PrivacySettings>
+): Promise<PrivacySettings> => {
+  const res = await api.patch<PrivacySettings>("/auth/me/privacy", payload);
   return res.data;
 };
 

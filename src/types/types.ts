@@ -45,6 +45,10 @@ export interface User extends AvatarFields {
   username: string;
   email?: string | null;
   role?: UserRole | null; // allow null
+  // Public-profile visibility toggles (default true). Optional so older stored
+  // sessions without these fields still type-check.
+  public_ratings?: boolean;
+  public_posts?: boolean;
 }
 
 export interface UserContextType {

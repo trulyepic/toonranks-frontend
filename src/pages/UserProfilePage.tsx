@@ -305,6 +305,105 @@ export default function UserProfilePage() {
         </div>
       </div>
 
+      {/* ── Ratings (only when the user keeps them public) ────────────────── */}
+      {profile.ratings != null && (
+        <div className="mb-6 rounded-[2rem] border border-slate-200/80 bg-white px-6 py-8 shadow-[0_18px_50px_rgba(15,23,42,0.06)] dark:border-[#342b24] dark:bg-[linear-gradient(145deg,rgba(27,22,18,0.98),rgba(20,16,13,0.97))] dark:shadow-[0_18px_50px_rgba(0,0,0,0.5)] sm:px-10 sm:py-10">
+          <div className="mb-6">
+            <h2 className="text-xl font-black text-slate-950 dark:text-white sm:text-2xl">
+              Ratings
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {profile.ratings.length > 0
+                ? `Series ${profile.username} has rated.`
+                : `${profile.username} hasn't rated any series yet.`}
+            </p>
+          </div>
+
+          {profile.ratings.length > 0 && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              {profile.ratings.map((rating) => (
+                <Link
+                  key={rating.series_id}
+                  to={`/series/${rating.series_id}`}
+                  className="group relative aspect-[2/3]"
+                  title={rating.title ?? undefined}
+                >
+                  <div className="h-full w-full overflow-hidden rounded-[18px] border border-slate-200 bg-slate-100 shadow-sm dark:border-[#2e2520] dark:bg-[#1e1712]">
+                    {rating.cover_url ? (
+                      <img
+                        src={rating.cover_url}
+                        alt={rating.title ?? "Series cover"}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center p-1">
+                        <span className="text-center text-[10px] leading-tight text-slate-400 dark:text-slate-600">
+                          {rating.title}
+                        </span>
+                      </div>
+                    )}
+                    {/* Score badge — dark scrim so it stays legible over any cover */}
+                    <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-slate-900/85 px-2 py-0.5 text-xs font-bold text-white ring-1 ring-white/10 backdrop-blur-sm">
+                      <span className="text-amber-300">★</span>
+                      {rating.score.toFixed(1)}
+                    </div>
+                    {/* Hover title overlay */}
+                    <div className="absolute inset-0 flex flex-col justify-end rounded-[18px] bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                      <div className="p-2.5 pb-3">
+                        <p className="line-clamp-2 text-xs font-semibold leading-tight text-white drop-shadow">
+                          {rating.title}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Forum Activity (only when the user keeps posts public) ─────────── */}
+      {profile.posts != null && (
+        <div className="mb-6 rounded-[2rem] border border-slate-200/80 bg-white px-6 py-8 shadow-[0_18px_50px_rgba(15,23,42,0.06)] dark:border-[#342b24] dark:bg-[linear-gradient(145deg,rgba(27,22,18,0.98),rgba(20,16,13,0.97))] dark:shadow-[0_18px_50px_rgba(0,0,0,0.5)] sm:px-10 sm:py-10">
+          <div className="mb-6">
+            <h2 className="text-xl font-black text-slate-950 dark:text-white sm:text-2xl">
+              Forum Activity
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {profile.posts.length > 0
+                ? `Recent posts from ${profile.username}.`
+                : `${profile.username} hasn't posted in the forum yet.`}
+            </p>
+          </div>
+
+          {profile.posts.length > 0 && (
+            <div className="grid gap-3">
+              {profile.posts.map((post) => (
+                <Link
+                  key={post.post_id}
+                  to={`/forum/${post.thread_id}`}
+                  className="group rounded-2xl border border-slate-100 bg-slate-50/60 px-5 py-4 transition hover:border-slate-300 hover:bg-slate-100/80 dark:border-[#2e2520] dark:bg-[#1a1410] dark:hover:border-[#3a3028] dark:hover:bg-[#201a16]"
+                >
+                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-stone-100">
+                    {post.thread_title ?? "Thread"}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
+                    {post.excerpt}
+                  </p>
+                  {post.created_at && (
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                      {formatJoinDate(post.created_at)}
+                    </p>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Public Reading Lists (only if any are public) ─────────────────── */}
       {hasLists && (
         <div className="mb-6 rounded-[2rem] border border-slate-200/80 bg-white px-6 py-8 shadow-[0_18px_50px_rgba(15,23,42,0.06)] dark:border-[#342b24] dark:bg-[linear-gradient(145deg,rgba(27,22,18,0.98),rgba(20,16,13,0.97))] dark:shadow-[0_18px_50px_rgba(0,0,0,0.5)] sm:px-10 sm:py-10">
