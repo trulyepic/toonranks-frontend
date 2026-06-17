@@ -40,11 +40,9 @@ export async function loader({
     getSeriesDetailById(id).catch(() => null),
     getSeriesSummary(id).catch(() => null),
   ]);
-  // A real series has at least a summary; neither = deleted/nonexistent, so
-  // return a proper 404 instead of a soft-404 (empty 200 page).
-  if (!seriesDetail && !summary) {
-    throw new Response("Not Found", { status: 404 });
-  }
+  // The loader runs without the browser-only auth/session context. Newly added
+  // draft or pending titles can look missing here, so the hydrated page makes
+  // the final 404 decision after authenticated client requests settle.
   return { seriesDetail, summary };
 }
 
@@ -156,6 +154,13 @@ const SeriesDetailPage = () => {
   const [seriesDetail, setSeriesDetail] = useState<SeriesDetailData | null>(
     loaderData?.seriesDetail ?? null
   );
+  const [hasSummary, setHasSummary] = useState(Boolean(loadedSummary));
+  const [detailRequestDone, setDetailRequestDone] = useState(
+    Boolean(loaderData?.seriesDetail)
+  );
+  const [summaryRequestDone, setSummaryRequestDone] = useState(
+    Boolean(loadedSummary)
+  );
 
   const [ratings, setRatings] = useState<Record<string, number>>({
     Story: -1,
@@ -233,9 +238,13 @@ const SeriesDetailPage = () => {
   }, [id, title, genre, type, author, artist]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchDetails = async () => {
+      setDetailRequestDone(false);
       try {
         const detail = await getSeriesDetailById(Number(id));
+        if (cancelled) return;
         setSeriesDetail(detail);
 
         const num = (k: string) =>
@@ -259,19 +268,32 @@ const SeriesDetailPage = () => {
         const baseCounts = detail.vote_counts || {};
         setDisplayCounts(getDisplayVoteCounts(baseCounts, Number(id)));
       } catch (err) {
-        console.error("Failed to fetch series detail", err);
+        if (!cancelled) {
+          setSeriesDetail(null);
+          console.error("Failed to fetch series detail", err);
+        }
+      } finally {
+        if (!cancelled) {
+          setDetailRequestDone(true);
+        }
       }
     };
 
     fetchDetails();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id, showEditModal]);
 
   useEffect(() => {
     let cancelled = false;
+    setSummaryRequestDone(false);
     (async () => {
       try {
         const s = await getSeriesSummary(Number(id));
         if (cancelled) return;
+        setHasSummary(true);
         setSeries((prev) => ({
           ...prev,
           id: s.id,
@@ -282,7 +304,14 @@ const SeriesDetailPage = () => {
           artist: s.artist ?? prev.artist,
         }));
       } catch (e) {
-        console.error("Failed to fetch series summary", e);
+        if (!cancelled) {
+          setHasSummary(false);
+          console.error("Failed to fetch series summary", e);
+        }
+      } finally {
+        if (!cancelled) {
+          setSummaryRequestDone(true);
+        }
       }
     })();
     return () => {
@@ -296,6 +325,25 @@ const SeriesDetailPage = () => {
       [category]: avg,
     }));
   }, []);
+
+  const hasRouteSeedData = Boolean(
+    title ||
+      genre ||
+      type ||
+      author ||
+      artist ||
+      locationState.can_manage_pending_details
+  );
+  const shouldShowNotFound =
+    detailRequestDone &&
+    summaryRequestDone &&
+    !seriesDetail &&
+    !hasSummary &&
+    !hasRouteSeedData;
+
+  if (shouldShowNotFound) {
+    return <NotFoundPage />;
+  }
 
   return (
     <>
