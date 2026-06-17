@@ -199,6 +199,53 @@ A finished, highly-rated series is the closest thing to a guaranteed good time i
 
 Pull up the completed rankings, trust the category scores, and pick the one that matches your mood — then clear your schedule.`,
   },
+  {
+    slug: "what-is-a-webtoon",
+    title: "What Is a Webtoon? The Vertical-Scroll Format, Explained",
+    description:
+      "Webtoons reinvented comics for the phone — one long vertical scroll, full color, episodic releases. Here's what defines the format and why it spread.",
+    author: AUTHOR,
+    publishedAt: "2026-06-16",
+    updatedAt: "2026-06-16",
+    tags: ["Guides", "Webtoons", "Manhwa"],
+    image: {
+      src: "/articles/what-is-a-webtoon/hero.svg",
+      alt: "A stylized phone showing a vertical-scroll comic strip",
+    },
+    body: `"Webtoon" gets used two ways, and the overlap trips people up. Sometimes it means *any* digital comic; more usefully, it means a specific **format** — a comic built as one long vertical strip you scroll through on a phone, usually in full color and released an episode at a time. That second meaning is the one worth understanding, because it changed how millions of people read comics.
+
+## The defining trait: you scroll, you don't flip
+
+A traditional comic or manga page is a grid of panels you read in a set order, then turn the page. A webtoon drops the page entirely. Panels are stacked in a single column — the **infinite canvas** — and you move through the story with one continuous downward scroll.
+
+That sounds like a small change. It isn't. Creators use the empty vertical space between panels as a tool: a long gap before a reveal becomes a beat of silence; a sudden drop can land a punchline or a shock. Pacing stops being about page turns and starts being about how far your thumb travels. The format has its own grammar.
+
+## Full color, phone-first
+
+Two things usually travel with the format. Webtoons are typically **full color**, and they're built for **phone screens first** — narrow, tall, readable one-handed on a commute. Traditional manga, by contrast, is usually black and white and composed for a printed page. None of this is a hard rule, but that combination — vertical scroll, color, mobile-native — is what people picture when they say "webtoon."
+
+If the format-versus-origin distinction feels fuzzy, you're not alone; we untangle it in [manga vs manhwa vs manhua](/articles/manga-vs-manhwa-vs-manhua). The short version: "webtoon" describes *how* a comic is built and read, while manhwa, manga, and manhua describe *where it's from*. Plenty of popular manhwa are webtoons — but the words aren't synonyms.
+
+## Where it came from
+
+The format grew out of **South Korea in the early 2000s**, when web portals began hosting comics made for the browser instead of for print. Freed from fixed page dimensions, creators leaned into the long vertical scroll, and the style spread from there — first across Korea, then worldwide as smartphones made it the obvious way to read on the move. Today dedicated apps and sites publish webtoons in many languages.
+
+## Released episode by episode
+
+Webtoons are **episodic**. Instead of volumes, you get episodes — often weekly — grouped into seasons, sometimes with breaks between arcs. That cadence shapes the experience: cliffhangers are tuned for the weekly wait, and a series can run for years. It also means "is it finished?" is a live question — some webtoons are complete, many are ongoing, and a few stall out.
+
+## Why it took over
+
+The honest answer is **friction**, or the lack of it. A webtoon asks almost nothing of a newcomer: no right-to-left adjustment, no decoding panel order, no setup — just open and scroll. Color makes the art instantly approachable, and bite-size episodes slot into the gaps in a day. For people who already live on their phones, it's the shortest path to a story, and that ease is most of why the format exploded.
+
+It isn't simply "better" than paged comics. A dense, masterfully composed manga page does things a vertical scroll can't. It's a different toolset, tuned for a different screen.
+
+## How to find good ones
+
+Format tells you how a series reads; it says nothing about whether it's any good. That part is on the community. Browse the [manhwa rankings](/type/MANHWA), where most webtoons live, sort by score, and open a few series pages to see how each rates on story, art, and characters — so you can skip the gorgeous-but-hollow ones. Torn between two? Put them in [Compare](/compare). And if you're brand new to the medium, start with our [beginner's guide to manhwa](/articles/where-to-start-with-manhwa).
+
+Read a couple and the format stops being a novelty — you're just reading. Which is the whole point.`,
+  },
 ];
 
 const WORDS_PER_MINUTE = 200;
