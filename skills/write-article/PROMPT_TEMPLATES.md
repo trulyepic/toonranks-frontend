@@ -31,6 +31,11 @@ first (or attach it), then use these. Fill in every `<…>` placeholder.
 > Have a real point of view. Be specific and concrete. Cut every sentence that
 > doesn't earn its place. Do not state any specific fact about a real series
 > unless it is widely known and safe; otherwise stay general.
+>
+> Write like a real person, not an AI: use contractions, vary the rhythm, and
+> **never use em dashes (—) or double hyphens (--).** Use commas, colons,
+> parentheses, or separate sentences instead. Avoid AI buzzwords (delve,
+> tapestry, testament, seamless, robust, elevate, "in the realm of", etc.).
 
 ---
 
@@ -40,12 +45,17 @@ Use when a draft feels generic or machine-made.
 
 > Revise the article below so it reads like strong human writing, per
 > `AUTHORING_GUIDE.md` §3. Specifically:
-> - Remove every banned phrase and filler transition.
-> - Vary sentence and paragraph length; break uniform rhythm.
+> - **Remove every em dash (—) and double hyphen (--).** Rewrite each with a
+>   comma, a colon, parentheses, or two sentences. Do not reintroduce any.
+> - Remove AI buzzwords (delve, tapestry, testament, seamless, robust, elevate,
+>   "in the realm of", "navigate the world of", etc.) and banned filler phrases.
+> - Break uniform rhythm: vary sentence and paragraph length; use contractions;
+>   an occasional fragment or a sentence starting with "And"/"But" is fine.
 > - Replace vague claims with specific, concrete ones (or cut them).
 > - Strengthen the point of view; make sure each section delivers a real idea.
-> - Cut throat-clearing intros and any summary that just restates the body.
-> Keep the meaning and the internal links. Return the full revised Markdown body.
+> - Cut throat-clearing intros and any tidy-bow summary that restates the body.
+> It should read like a real person who reads this stuff, not a model. Keep the
+> meaning and the internal links. Return the full revised Markdown body.
 >
 > `<paste draft>`
 

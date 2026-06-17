@@ -18,6 +18,7 @@ how-the-site-works pieces.
 | `how-toon-ranks-scores-series` | How Toon Ranks Scores and Ranks Series | How-the-site-works | Category-based scoring vs single star rating; harder to game |
 | `where-to-start-with-manhwa` | Where to Start with Manhwa: A Beginner's Guide | Beginner guide | Webtoon format + sub-genres + how to pick a first read |
 | `completed-series-worth-binging` | Completed Series Worth Binging in One Sitting | Curated/guide | Using "completed" status + category scores to pick safe binges |
+| `what-is-a-webtoon` | What Is a Webtoon? The Vertical-Scroll Format, Explained | Explainer | The vertical-scroll / infinite-canvas format (color, phone-first, episodic) vs origin; why it spread |
 
 ---
 
@@ -27,7 +28,6 @@ Pick one, confirm it doesn't overlap the published angles, then write. Remove or
 move it here once published.
 
 **Explainers**
-- What is a webtoon? Vertical-scroll format vs traditional paged comics.
 - Reading order & terminology newcomers trip on (chapters vs episodes, seasons, hiatus vs cancelled).
 - Color vs black-and-white: why the format choice shapes the art.
 
