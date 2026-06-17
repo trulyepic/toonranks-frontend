@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
 Sitemap: https://api.toonranks.com/sitemap.xml
+Sitemap: https://www.toonranks.com/sitemap-articles.xml

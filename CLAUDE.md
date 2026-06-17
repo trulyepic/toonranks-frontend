@@ -188,6 +188,19 @@ See `docs/CONVENTIONS.md` for the full reference. Short version:
 
 ---
 
+## Repo skills
+
+Reusable, AI-agnostic task playbooks live in **`skills/`** (see
+`skills/README.md`). To "use the **X** skill," open `skills/X/SKILL.md` and
+follow it. Notably:
+
+- **write-article** — author & publish a `/articles` post to the house standard
+  (`skills/write-article/`).
+- **generate-article-image** — make/source an original, royalty-free, on-brand
+  article image (`skills/generate-article-image/`).
+
+---
+
 ## Related repos
 
 | Repo | Purpose | Deployment |
