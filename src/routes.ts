@@ -30,12 +30,15 @@ export default [
   route("forum", "pages/ForumPage.tsx"),
   route("forum/:id", "pages/ThreadPage.tsx"),
   route("lists/:token", "pages/PublicReadingListPage.tsx"),
+  route("articles", "pages/ArticlesIndexPage.tsx"),
+  route("articles/:slug", "pages/ArticlePage.tsx"),
 
   // Sitemap proxies (resource routes) — replicate the old Amplify rewrites that
   // served these XML files from the backend on the www host. Must be registered
   // before the "*" catch-all so they aren't swallowed by it.
   route("sitemap.xml", "sitemap/sitemapIndex.ts"),
   route("sitemap-static.xml", "sitemap/sitemapStatic.ts"),
+  route("sitemap-articles.xml", "sitemap/sitemapArticles.ts"),
   route("sitemaps/*", "sitemap/sitemapsSplat.ts"),
 
   route("*", "pages/NotFoundPage.tsx"),

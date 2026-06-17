@@ -45,6 +45,11 @@ const Footer = () => {
                 </a>
               </li>
               <li>
+                <a href="/articles" className={footerLinkClass}>
+                  Articles
+                </a>
+              </li>
+              <li>
                 <a href="/contact" className={footerLinkClass}>
                   Contact
                 </a>
