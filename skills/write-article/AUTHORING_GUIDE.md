@@ -62,6 +62,23 @@ structurally identical. Avoid every one of these:
 - Restating the title/prompt back as the first sentence.
 - Listicles where every item is one vague sentence with no real insight.
 - Uniform paragraph lengths and identical sentence rhythm.
+- **AI buzzwords:** "delve," "dive into," "navigate the world of," "tapestry,"
+  "testament to," "in the realm of," "boasts," "seamless," "robust," "elevate,"
+  "unlock," "embark," "treasure trove," "game-changer," "ever-evolving,"
+  "landscape of," "vibrant world of." If a phrase smells like SEO-blog
+  boilerplate, cut it.
+- The "rule of three" on autopilot (every sentence and list arriving in neat triplets).
+- Endings that wrap everything in a tidy bow.
+
+**Punctuation & typography — this is a dead giveaway:**
+- **Do not use em dashes (—) or double hyphens (--).** Overused em dashes,
+  especially as bracketing asides, are one of the clearest AI tells. Rewrite
+  with a comma, a colon, parentheses, or two separate sentences. Example:
+  instead of "Webtoons — built for phones — took over," write "Webtoons, built
+  for phones, took over." or "Webtoons were built for phones, and they took off."
+- Drop the constant em-dash-aside habit entirely; vary how you join clauses.
+- Don't lean on semicolons or perfectly balanced "X; Y" constructions either.
+- Use plain straight quotes/apostrophes; don't sprinkle fancy typography.
 
 **Do instead:**
 - Open with a real hook — an observation, a tension, a concrete scenario — then
@@ -72,6 +89,17 @@ structurally identical. Avoid every one of these:
 - Have a point of view. A good article could only have been written by someone
   who actually thinks about this stuff.
 - Cut throat-clearing. Cut summaries that just repeat the body.
+
+**Sound like a real person, not a model:**
+- Use contractions (it's, you're, don't). Talk to the reader directly when it helps.
+- Let the rhythm be uneven. A short fragment is fine. Starting a sentence with
+  "And" or "But" now and then is fine.
+- Prefer concrete specifics over abstract summary. Show it; don't just label it.
+- A little informality or dry humor is good. Real writers have a personality;
+  flawless symmetry reads as machine output.
+- Final check: read it back in your head. If it sounds like a press release or a
+  generic SEO blog, rewrite it until it sounds like a person who actually reads
+  this stuff and has opinions about it.
 
 **The litmus test:** would a knowledgeable reader find at least one genuinely
 useful or interesting idea they didn't already have? If not, the article isn't
@@ -252,6 +280,7 @@ Helpers `getAllArticles()` (newest first), `getArticleBySlug()`, and
 
 - [ ] Original wording and an original angle (not in `TOPICS.md` already)
 - [ ] Passes the §3 quality bar — no banned phrases, varied rhythm, real point of view
+- [ ] **No em dashes (—) or double hyphens (--)**; no AI buzzwords; reads like a real person
 - [ ] Genuinely useful: a knowledgeable reader learns/feels something
 - [ ] ~700–1,200 words, scannable (H2/H3, short paragraphs)
 - [ ] No fabricated facts; specific claims about real series are safe to state
