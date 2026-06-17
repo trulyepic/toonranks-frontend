@@ -142,7 +142,7 @@ export default function ArticlePage() {
         </div>
       </article>
 
-      {/* Internal links back into the product — gives crawlers paths and readers a next step. */}
+      {/* Internal links back into the product: crawl paths plus a next step for readers. */}
       <div className="mt-10 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark-theme-card">
         <h2 className="text-lg font-black text-slate-950 dark:text-white">
           Find your next series
