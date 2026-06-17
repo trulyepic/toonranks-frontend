@@ -4,7 +4,7 @@ import { getAllArticles, readingTimeMinutes } from "../content/articles";
 
 const PAGE_TITLE = `Articles | ${SITE_NAME}`;
 const PAGE_DESCRIPTION =
-  "Guides, explainers, and recommendations for manga, manhwa, and manhua readers — from the Toon Ranks community.";
+  "Guides, explainers, and recommendations for manga, manhwa, and manhua readers, from the Toon Ranks community.";
 
 export function meta() {
   const articles = getAllArticles();
@@ -66,7 +66,7 @@ export default function ArticlesIndexPage() {
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
           Guides, explainers, and recommendations for manga, manhwa, and manhua
-          readers — written by the Toon Ranks community.
+          readers, written by the Toon Ranks community.
         </p>
       </header>
 
@@ -75,36 +75,38 @@ export default function ArticlesIndexPage() {
           <Link
             key={article.slug}
             to={`/articles/${article.slug}`}
-            className="group block rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md dark-theme-card sm:p-7"
+            className="group flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md dark-theme-card sm:flex-row sm:items-start sm:gap-5 sm:p-7"
           >
             {article.image && (
               <img
                 src={article.image.src}
                 alt={article.image.alt}
-                className="mb-4 aspect-[16/9] w-full rounded-2xl object-cover"
+                className="aspect-[16/9] w-full rounded-2xl object-cover sm:w-48 sm:shrink-0 lg:w-56"
                 loading="lazy"
               />
             )}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-              <span>{formatDate(article.publishedAt)}</span>
-              <span aria-hidden="true">·</span>
-              <span>{readingTimeMinutes(article)} min read</span>
-            </div>
-            <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950 transition group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-300 sm:text-2xl">
-              {article.title}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              {article.description}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {article.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-[#241d19] dark:text-slate-400"
-                >
-                  {tag}
-                </span>
-              ))}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                <span>{formatDate(article.publishedAt)}</span>
+                <span aria-hidden="true">·</span>
+                <span>{readingTimeMinutes(article)} min read</span>
+              </div>
+              <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950 transition group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-300 sm:text-2xl">
+                {article.title}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                {article.description}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {article.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:bg-[#241d19] dark:text-slate-400"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
           </Link>
         ))}
