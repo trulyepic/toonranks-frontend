@@ -183,7 +183,7 @@ const ManCard = ({
           </div>
 
           <div className="mt-3 flex flex-1 flex-col gap-2 px-2 pb-2 sm:mt-4 sm:px-2.5">
-            <h2 className="line-clamp-2 min-h-[2.6rem] w-full text-[15px] font-semibold leading-5 text-slate-900 dark:text-white sm:text-base sm:leading-normal" title={title}>
+            <h2 className="line-clamp-1 w-full text-[15px] font-semibold leading-5 text-slate-900 dark:text-white sm:text-base sm:leading-normal" title={title}>
               {title}
             </h2>
 
