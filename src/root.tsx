@@ -93,7 +93,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {/* Google AdSense */}
         <script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5886971570640795"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7976878731775731"
           crossOrigin="anonymous"
         />
 
