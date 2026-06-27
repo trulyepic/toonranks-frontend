@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useLocation, useLoaderData } from "react-router-dom";
 import type { LoaderFunctionArgs } from "react-router";
 import SeriesDetail from "../components/SeriesDetail";
+import RelatedArticles from "../components/RelatedArticles";
 import AddSeriesDetailModal from "../components/AddSeriesDetailModal";
 import {
   getSeriesDetailById,
@@ -531,6 +532,8 @@ const SeriesDetailPage = () => {
                 />
               </div>
             </section>
+
+            <RelatedArticles seriesType={series.type} />
           </>
         )}
 
