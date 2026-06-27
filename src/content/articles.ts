@@ -310,3 +310,36 @@ export function getAllArticles(): Article[] {
 export function getArticleBySlug(slug: string): Article | undefined {
   return articles.find((a) => a.slug === slug);
 }
+
+/** Maps a series type (e.g. "MANHWA") to the article tag we use for it. */
+function tagForSeriesType(seriesType?: string): string | undefined {
+  switch ((seriesType ?? "").toUpperCase()) {
+    case "MANGA":
+      return "Manga";
+    case "MANHWA":
+      return "Manhwa";
+    case "MANHUA":
+      return "Manhua";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Articles to surface alongside a series. Prefers pieces tagged for the series'
+ * type (manga/manhwa/manhua); if there aren't enough, tops up with the most
+ * recent articles so the module is never empty when articles exist. Pure and
+ * deterministic (newest-first), so it's safe to call during SSR.
+ */
+export function getRelatedArticles(seriesType?: string, limit = 3): Article[] {
+  const all = getAllArticles();
+  const tag = tagForSeriesType(seriesType);
+
+  const matched = tag ? all.filter((a) => a.tags.includes(tag)) : [];
+  if (matched.length >= limit) return matched.slice(0, limit);
+
+  // Top up with the newest articles not already included, preserving order.
+  const seen = new Set(matched.map((a) => a.slug));
+  const filler = all.filter((a) => !seen.has(a.slug));
+  return [...matched, ...filler].slice(0, limit);
+}
