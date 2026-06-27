@@ -19,6 +19,7 @@ how-the-site-works pieces.
 | `where-to-start-with-manhwa` | Where to Start with Manhwa: A Beginner's Guide | Beginner guide | Webtoon format + sub-genres + how to pick a first read |
 | `completed-series-worth-binging` | Completed Series Worth Binging in One Sitting | Curated/guide | Using "completed" status + category scores to pick safe binges |
 | `what-is-a-webtoon` | What Is a Webtoon? The Vertical-Scroll Format, Explained | Explainer | The vertical-scroll / infinite-canvas format (color, phone-first, episodic) vs origin; why it spread |
+| `regression-stories-explained` | Regression Stories Explained: The Appeal and the Catch | Genre spotlight | Regression vs reincarnation/isekai; foreknowledge as a fragile engine; how category scores spot the good ones |
 
 ---
 
@@ -42,7 +43,6 @@ move it here once published.
 - What makes a satisfying ending — and why finished series are worth prioritizing.
 
 **Genre / sub-genre spotlights**
-- Regression stories explained: the appeal and the best entry points.
 - Cultivation & xianxia for newcomers (manhua-leaning).
 - Romance manhwa: sub-genres and what sets the great ones apart.
 
