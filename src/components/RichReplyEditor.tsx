@@ -14,7 +14,6 @@ import { NoticeModal } from "./NoticeModal";
 
 export default function RichReplyEditor({
   onSubmit,
-  compact = false,
   initial = "",
   mode = "reply",
   onCancel,
@@ -32,6 +31,9 @@ export default function RichReplyEditor({
   const { user } = useUser();
 
   const [value, setValue] = useState(initial);
+  // Formatting tools (toolbar + image/GIF + list + hint) are hidden by default
+  // for a simpler, Reddit-style box; the user reveals them on demand.
+  const [showTools, setShowTools] = useState(false);
   const [results, setResults] = useState<ForumSeriesRef[]>([]);
   const [userResults, setUserResults] = useState<UserSearchResult[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -375,13 +377,8 @@ export default function RichReplyEditor({
   }
 
   return (
-    <div
-      className={`relative rounded ${
-        compact
-          ? "bg-gray-50 dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.96),_rgba(18,15,12,0.96))]"
-          : "bg-white dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.98),_rgba(21,17,14,0.98))]"
-      }`}
-    >
+    <div className="relative">
+      {showTools && (
       <div className="relative mb-2">
         <MarkdownToolbar
           textareaRef={taRef}
@@ -389,7 +386,9 @@ export default function RichReplyEditor({
           onChange={setValue}
         />
       </div>
+      )}
 
+      {showTools && (
       <div className="relative mb-2 flex items-center gap-2 text-sm">
         <button
           type="button"
@@ -505,6 +504,7 @@ export default function RichReplyEditor({
           Markdown · <span className="font-semibold">@</span> to mention a series or user · images up to 300 KB, GIFs up to 1 MB
         </span>
       </div>
+      )}
 
       <textarea
         ref={taRef}
@@ -516,15 +516,25 @@ export default function RichReplyEditor({
             ? "Edit your content..."
             : "Write a reply... (type @ to mention a series or user)"
         }
-        className="h-28 w-full rounded border border-slate-200 bg-white px-3 py-2 text-slate-800 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100"
+        className="h-28 w-full rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]"
       />
       <div className="flex items-center justify-between mt-1">
-        {draftSaved && (
-          <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
-            Draft saved
-          </span>
-        )}
-        {!draftSaved && <span />}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowTools((s) => !s)}
+            aria-expanded={showTools}
+            className="rounded px-1.5 py-0.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-200"
+            title={showTools ? "Hide formatting tools" : "Show formatting tools"}
+          >
+            {showTools ? "Hide formatting" : "Aa  Formatting"}
+          </button>
+          {draftSaved && (
+            <span className="text-[11px] italic text-slate-400 dark:text-slate-500">
+              Draft saved
+            </span>
+          )}
+        </div>
         <span
           className={`text-xs ${
             value.length > MAX_POST_LENGTH

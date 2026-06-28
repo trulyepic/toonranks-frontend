@@ -36,6 +36,9 @@ import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { getTopRankMap } from "../util/rankMap";
 import MarkdownToolbar from "../components/MarkdownToolbar";
+import ForumPersonalFeed from "../components/ForumPersonalFeed";
+
+type ForumView = "discover" | "following" | "saved";
 
 const MAX_THREADS_PER_USER = 10;
 const MAX_SERIES_REFS = 10;
@@ -189,6 +192,7 @@ export default function ForumPage() {
   const [myThreadCount, setMyThreadCount] = useState(0);
   const [confirmThread, setConfirmThread] = useState<ForumThread | null>(null);
   const { user } = useUser();
+  const [view, setView] = useState<ForumView>("discover");
   const notice = useNotice();
   const [rankMap, setRankMap] = useState<Record<string, number>>({});
 
@@ -372,6 +376,36 @@ export default function ForumPage() {
         </div>
       </div>
 
+      {user && (
+        <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-1">
+          {(
+            [
+              { key: "discover", label: "Discover" },
+              { key: "following", label: "Following" },
+              { key: "saved", label: "Saved" },
+            ] as { key: ForumView; label: string }[]
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setView(tab.key)}
+              className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
+                view === tab.key
+                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/30 dark:text-blue-200"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-300 dark:hover:bg-[#241d19]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {view !== "discover" && user ? (
+        <ForumPersonalFeed view={view} />
+      ) : null}
+
+      {view === "discover" && (
+        <>
       <div className="mb-4 flex flex-col gap-4 rounded-[1.75rem] border border-slate-200/80 bg-white/80 px-4 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-sm dark:border-[#3a3028] dark:bg-[linear-gradient(140deg,rgba(27,22,19,0.98),rgba(18,15,13,0.97)_62%,rgba(20,33,28,0.66))] dark:shadow-[0_18px_50px_rgba(0,0,0,0.6)] sm:px-6 sm:py-5">
         <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-stone-300">
           Showing <strong>{threads.length}</strong> of <strong>{total}</strong>
@@ -696,6 +730,8 @@ export default function ForumPage() {
         <div className="mt-4">
           <Pager page={page} totalPages={totalPages} onGo={goToPage} />
         </div>
+      )}
+        </>
       )}
 
       {/* CREATE */}
