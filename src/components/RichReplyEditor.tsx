@@ -19,6 +19,7 @@ export default function RichReplyEditor({
   onCancel,
   threadId,
   editingPostId = null,
+  compact = false,
 }: {
   onSubmit: (content: string, seriesIds: number[]) => Promise<void> | void;
   compact?: boolean;
@@ -83,6 +84,15 @@ export default function RichReplyEditor({
 
   const toolbarButtonClass =
     "rounded border border-slate-200 px-2 py-1 text-slate-700 hover:bg-gray-50 dark:border-[#3a3028] dark:text-slate-200 dark:hover:bg-[#241d19]";
+  const textareaClassName = compact
+    ? "h-24 w-full rounded-2xl border border-slate-200/80 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]"
+    : "h-28 w-full rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]";
+  const primaryButtonClassName = compact
+    ? "rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]"
+    : "rounded bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]";
+  const secondaryButtonClassName = compact
+    ? "rounded border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]"
+    : "rounded border border-slate-200 bg-white px-3 py-1.5 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]";
 
   const insertAtCaret = (text: string) => {
     const el = taRef.current;
@@ -516,7 +526,7 @@ export default function RichReplyEditor({
             ? "Edit your content..."
             : "Write a reply... (type @ to mention a series or user)"
         }
-        className="h-28 w-full rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]"
+        className={textareaClassName}
       />
       <div className="flex items-center justify-between mt-1">
         <div className="flex items-center gap-2">
@@ -656,26 +666,37 @@ export default function RichReplyEditor({
           <>
             <button
               onClick={onCancel}
-              className="rounded border border-slate-200 bg-white px-3 py-1.5 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]"
+              className={secondaryButtonClassName}
             >
               Cancel
             </button>
             <button
               onClick={handlePrimary}
               disabled={value.length > MAX_POST_LENGTH}
-              className="rounded bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]"
+              className={primaryButtonClassName}
             >
               Save
             </button>
           </>
         ) : (
-          <button
-            onClick={handlePrimary}
-            disabled={value.length > MAX_POST_LENGTH}
-            className="rounded bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]"
-          >
-            Post Reply
-          </button>
+          <>
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className={secondaryButtonClassName}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={handlePrimary}
+              disabled={value.length > MAX_POST_LENGTH}
+              className={primaryButtonClassName}
+            >
+              Reply
+            </button>
+          </>
         )}
       </div>
 
