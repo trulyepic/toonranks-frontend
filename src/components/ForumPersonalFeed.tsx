@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import { Image as ImageIcon } from "lucide-react";
 import {
   fetchMyFollowing,
   fetchMyBookmarks,
@@ -10,8 +16,37 @@ import { timeAgo } from "../util/timeAgo";
 
 type PersonalView = "following" | "saved";
 
+const sanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames || []), "img"],
+  attributes: {
+    ...(defaultSchema.attributes || {}),
+    img: [
+      ["src", /^https?:\/\//i],
+      "alt",
+      "title",
+      "loading",
+      "decoding",
+      "width",
+      "height",
+    ],
+    a: [
+      ...(defaultSchema.attributes?.a || []),
+      ["href", /^https?:\/\//i],
+      "title",
+    ],
+  },
+};
+
+function hasMarkdownImage(markdown: string): boolean {
+  return (
+    /!\[[^\]]*]\(\s*https?:\/\/[^)]+\)/i.test(markdown) ||
+    /\[[^\]]*]\(\s*https?:\/\/[^)]+\.(?:png|jpe?g|webp|gif)(?:[?#][^)]*)?\s*\)/i.test(markdown)
+  );
+}
+
 /**
- * The personalized forum views ("Following" + "Saved") shown to logged-in
+ * The personalized forum views ("Following" + "Bookmarked") shown to logged-in
  * users via the tabs on /forum. Reuses the existing follow/bookmark endpoints
  * (GET /forum/me/following, GET /forum/me/bookmarks) — purely a presentation
  * layer, no new backend. Public discovery stays the default forum landing.
@@ -62,7 +97,7 @@ export default function ForumPersonalFeed({ view }: { view: PersonalView }) {
     return (
       <div className="py-10 text-center text-sm text-rose-600 dark:text-rose-300">
         Could not load your{" "}
-        {view === "following" ? "followed threads" : "saved posts"}. Please try
+        {view === "following" ? "followed threads" : "bookmarked posts"}. Please try
         again.
       </div>
     );
@@ -118,11 +153,11 @@ export default function ForumPersonalFeed({ view }: { view: PersonalView }) {
     );
   }
 
-  // Saved posts
+  // Bookmarked posts
   if (posts.length === 0) {
     return (
       <EmptyState
-        title="No saved posts yet"
+        title="No bookmarked posts yet"
         body="Bookmark a reply to save it here. Open any post and tap the bookmark icon to keep it for later."
       />
     );
@@ -131,8 +166,8 @@ export default function ForumPersonalFeed({ view }: { view: PersonalView }) {
   return (
     <ul className="space-y-3">
       {posts.map((p) => {
-        const snippet = p.content_markdown.replace(/\s+/g, " ").trim().slice(0, 160);
         const href = p.thread_id ? `/forum/${p.thread_id}#post-${p.id}` : "/forum";
+        const hasImage = hasMarkdownImage(p.content_markdown);
         return (
           <li key={p.id}>
             <Link
@@ -145,15 +180,96 @@ export default function ForumPersonalFeed({ view }: { view: PersonalView }) {
                 </span>
                 <span aria-hidden="true">·</span>
                 <span suppressHydrationWarning>{timeAgo(p.created_at)}</span>
+                {hasImage ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:border-sky-800/70 dark:bg-sky-950/30 dark:text-sky-300">
+                    <ImageIcon className="h-3 w-3" aria-hidden="true" />
+                    Image
+                  </span>
+                ) : null}
               </div>
-              <p className="mt-1 line-clamp-2 text-sm text-slate-700 dark:text-slate-200">
-                {snippet || "(no content)"}
-              </p>
+              <BookmarkedPostPreview markdown={p.content_markdown} />
             </Link>
           </li>
         );
       })}
     </ul>
+  );
+}
+
+function BookmarkedPostPreview({ markdown }: { markdown: string }) {
+  const safeMd = markdown
+    .replace(/\[([^\]]+?)\]\(\s*series:\s*\d+\s*\)/gi, "$1")
+    .replace(/\[([^\]]+?)\]\(\s*\/series\/\d+(?:[?#][^)]+)?\s*\)/gi, "$1")
+    .trim();
+
+  if (!safeMd) {
+    return (
+      <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+        (no content)
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-1 max-h-48 overflow-hidden text-sm text-slate-700 dark:text-slate-200">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
+        components={{
+          p: ({ children }) => (
+            <p className="my-1 leading-6 first:mt-0 last:mb-0">{children}</p>
+          ),
+          img: ({ src = "", alt = "", ...props }) => (
+            <img
+              src={src}
+              alt={alt}
+              loading="lazy"
+              decoding="async"
+              className="mt-2 max-h-40 max-w-full rounded-lg object-contain"
+              {...props}
+            />
+          ),
+          a: ({ children, href }) => {
+            const url = String(href ?? "");
+            if (/^https?:\/\/.+\.(?:png|jpe?g|webp|gif)$/i.test(url)) {
+              return (
+                <img
+                  src={url}
+                  alt={typeof children === "string" ? children : "image"}
+                  loading="lazy"
+                  decoding="async"
+                  className="mt-2 max-h-40 max-w-full rounded-lg object-contain"
+                />
+              );
+            }
+
+            return (
+              <span className="font-medium text-slate-900 dark:text-stone-100">
+                {children}
+              </span>
+            );
+          },
+          ul: ({ children }) => (
+            <ul className="my-1 list-disc space-y-1 pl-5">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="my-1 list-decimal space-y-1 pl-5">{children}</ol>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="my-2 border-l-2 border-slate-300 pl-3 text-slate-500 dark:border-[#5b4b3e] dark:text-stone-400">
+              {children}
+            </blockquote>
+          ),
+          code: ({ children }) => (
+            <code className="rounded bg-slate-100 px-1 py-0.5 text-xs dark:bg-[#18120f]">
+              {children}
+            </code>
+          ),
+        }}
+      >
+        {safeMd}
+      </ReactMarkdown>
+    </div>
   );
 }
 
