@@ -1510,7 +1510,6 @@ function ReplyBranch({
   notify,
   rankMap,
   opUsername,
-  connected = false,
 }: {
   post: ForumPost;
   depth: number;
@@ -1537,8 +1536,6 @@ function ReplyBranch({
   }) => void;
   rankMap: Record<string, number>;
   opUsername: string | null;
-  /** True when rendered as a nested child (draws the elbow into the parent rail). */
-  connected?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
@@ -1676,7 +1673,7 @@ function ReplyBranch({
       resizeObserver?.disconnect();
       window.removeEventListener("resize", updateRail);
     };
-  }, [childIds, collapsed]);
+  }, [childIds, children, collapsed]);
 
   return (
     <div ref={branchRef} className="relative flex" style={{ gap: RAIL_GAP }}>
@@ -2131,7 +2128,6 @@ function ReplyBranch({
                   notify={notify}
                   rankMap={rankMap}
                   opUsername={opUsername}
-                  connected
                 />
               </div>
             ))}
