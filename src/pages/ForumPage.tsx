@@ -382,7 +382,7 @@ export default function ForumPage() {
             [
               { key: "discover", label: "Discover" },
               { key: "following", label: "Following" },
-              { key: "saved", label: "Saved" },
+              { key: "saved", label: "Bookmarked" },
             ] as { key: ForumView; label: string }[]
           ).map((tab) => (
             <button
@@ -1599,7 +1599,8 @@ function NewThreadModal({
 
         {/* body with @-mention support */}
         <div className="mb-1">
-          <MarkdownToolbar
+          <Markd
+              ownToolbar
             textareaRef={mdRef}
             value={md}
             onChange={setMd}
