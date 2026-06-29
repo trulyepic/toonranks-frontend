@@ -225,6 +225,16 @@ function ListPillMaybeActive({
   );
 }
 
+// Reddit/YouTube-style branch rail geometry. A parent owns the visible rail
+// for its direct replies, so the final curve can end naturally without a tail.
+const RAIL_AVATAR = 32; // UserAvatar size="sm" (h-8 w-8)
+const RAIL_GAP = 8; // gap between the avatar/rail column and the content
+const RAIL_X = RAIL_AVATAR / 2;
+const RAIL_CHILD_AVATAR_LEFT = RAIL_AVATAR + RAIL_GAP;
+const RAIL_CHILD_CURVE_X = RAIL_X + 10;
+const RAIL_ELBOW_RADIUS = 12;
+const RAIL_START_Y = RAIL_AVATAR + 4;
+
 /** Total number of nested descendants under a post (for the collapsed label). */
 function countDescendants(
   postId: number,
@@ -1120,68 +1130,72 @@ export default function ThreadPage() {
                   />
                   {!thread?.latest_first ? (
                     !thread?.locked || isAdmin ? (
-                      <details
-                        open={originalReplyComposerOpen}
-                        onToggle={(event) => {
-                          setOriginalReplyComposerOpen(event.currentTarget.open);
-                        }}
-                        className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.96),_rgba(18,15,12,0.96))]"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOriginalReplyComposerOpen((open) => !open)
+                        }
+                        aria-expanded={originalReplyComposerOpen}
+                        className="inline-flex items-center px-1.5 py-1 text-sm font-medium text-blue-700 transition hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
                       >
-                        <summary className="cursor-pointer list-none text-xs font-medium text-blue-700 marker:hidden dark:text-blue-300">
-                          Reply
-                        </summary>
-                        <div className="mt-3 min-w-[min(42rem,calc(100vw-4rem))]">
-                          <RichReplyEditor
-                            compact
-                            threadId={threadId}
-                            onSubmit={async (content, seriesIds) => {
-                              if (!user) {
-                                notice.show({
-                                  message:
-                                    "You need to be logged in to post a reply.",
-                                  title: "Sign in required",
-                                  variant: "warning",
-                                });
-                                return;
-                              }
-
-                              const trimmed = content.trim();
-                              if (!trimmed) {
-                                notice.show({
-                                  message: "Reply cannot be empty.",
-                                  title: "Cannot post",
-                                  variant: "warning",
-                                });
-                                return;
-                              }
-
-                              try {
-                                const p = await createForumPost(threadId, {
-                                  content_markdown: trimmed,
-                                  series_ids: seriesIds,
-                                  parent_id: posts[0].id,
-                                });
-                                setPosts((prev) => [...prev, p]);
-                                setOriginalReplyComposerOpen(false);
-                              } catch (err: unknown) {
-                                notice.show({
-                                  message:
-                                    getErrorMessage(err) ||
-                                    "Failed to post reply.",
-                                  title: "Post failed",
-                                  variant: "error",
-                                });
-                              }
-                            }}
-                          />
-                        </div>
-                      </details>
+                        Reply
+                      </button>
                     ) : (
                       <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200">
                         Replies are locked.
                       </span>
                     )
                   ) : null}
+                  {!thread?.latest_first &&
+                    originalReplyComposerOpen &&
+                    (!thread?.locked || isAdmin) && (
+                      <div className="mt-2 w-full basis-full">
+                        <RichReplyEditor
+                          compact
+                          threadId={threadId}
+                          onCancel={() => setOriginalReplyComposerOpen(false)}
+                          onSubmit={async (content, seriesIds) => {
+                            if (!user) {
+                              notice.show({
+                                message:
+                                  "You need to be logged in to post a reply.",
+                                title: "Sign in required",
+                                variant: "warning",
+                              });
+                              return;
+                            }
+
+                            const trimmed = content.trim();
+                            if (!trimmed) {
+                              notice.show({
+                                message: "Reply cannot be empty.",
+                                title: "Cannot post",
+                                variant: "warning",
+                              });
+                              return;
+                            }
+
+                            try {
+                              const p = await createForumPost(threadId, {
+                                content_markdown: trimmed,
+                                series_ids: seriesIds,
+                                parent_id: posts[0].id,
+                              });
+                              setPosts((prev) => [...prev, p]);
+                              setOriginalReplyComposerOpen(false);
+                            } catch (err: unknown) {
+                              notice.show({
+                                message:
+                                  getErrorMessage(err) ||
+                                  "Failed to post reply.",
+                                title: "Post failed",
+                                variant: "error",
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
                 </div>
 
                 {/* Reply composer — directly under the original post (Reddit-style),
@@ -1496,6 +1510,7 @@ function ReplyBranch({
   notify,
   rankMap,
   opUsername,
+  connected = false,
 }: {
   post: ForumPost;
   depth: number;
@@ -1522,16 +1537,9 @@ function ReplyBranch({
   }) => void;
   rankMap: Record<string, number>;
   opUsername: string | null;
+  /** True when rendered as a nested child (draws the elbow into the parent rail). */
+  connected?: boolean;
 }) {
-  const railColors = [
-    "#3b82f6",
-    "#93c5fd",
-    "#a5b4fc",
-    "#c4b5fd",
-    "#d8b4fe",
-    "#f0abfc",
-  ];
-
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
   const [replyComposerOpen, setReplyComposerOpen] = useState(false);
@@ -1540,9 +1548,14 @@ function ReplyBranch({
   const [reportReason, setReportReason] = useState("");
   const [reported, setReported] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [bookmarked, setBookmarked] = useState(!!post.viewer_has_bookmarked);
-
-  const rail = railColors[Math.min(depth, railColors.length - 1)];
+  const branchRef = useRef<HTMLDivElement | null>(null);
+  const childRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [railSvg, setRailSvg] = useState<{ d: string; height: number } | null>(
+    null
+  );
+  const [railHover, setRailHover] = useState(false);
 
   const idxRoman = toRoman(topIndex);
   const isOp = !!post.author_username && post.author_username === opUsername;
@@ -1601,29 +1614,162 @@ function ReplyBranch({
 
   const isEditingThis = editingPostId === post.id;
   const collapsedCount = collapsed ? countDescendants(post.id, byParent) : 0;
+  const childIds = children.map((child) => child.id).join(",");
+
+  useEffect(() => {
+    if (collapsed || children.length === 0) {
+      setRailSvg(null);
+      return;
+    }
+
+    const branch = branchRef.current;
+    if (!branch) return;
+
+    const updateRail = () => {
+      const branchTop = branch.getBoundingClientRect().top;
+      const childCenters = children
+        .map((child) => childRefs.current[child.id])
+        .filter((node): node is HTMLDivElement => !!node)
+        .map(
+          (node) =>
+            node.getBoundingClientRect().top - branchTop + RAIL_AVATAR / 2
+        );
+
+      if (childCenters.length === 0) {
+        setRailSvg(null);
+        return;
+      }
+
+      const lastCenter = childCenters[childCenters.length - 1];
+      const lastCurveStart = Math.max(
+        RAIL_START_Y,
+        lastCenter - RAIL_ELBOW_RADIUS
+      );
+      const d = [
+        `M ${RAIL_X} ${RAIL_START_Y} V ${lastCurveStart}`,
+        ...childCenters.map((center) => {
+          const curveStart = Math.max(RAIL_START_Y, center - RAIL_ELBOW_RADIUS);
+          return `M ${RAIL_X} ${curveStart} Q ${RAIL_X} ${center} ${RAIL_CHILD_CURVE_X} ${center} H ${RAIL_CHILD_AVATAR_LEFT}`;
+        }),
+      ].join(" ");
+      const next = { d, height: Math.ceil(lastCenter + 1) };
+
+      setRailSvg((current) =>
+        current?.d === next.d && current.height === next.height ? current : next
+      );
+    };
+
+    updateRail();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(updateRail)
+        : null;
+    resizeObserver?.observe(branch);
+    children.forEach((child) => {
+      const node = childRefs.current[child.id];
+      if (node) resizeObserver?.observe(node);
+    });
+    window.addEventListener("resize", updateRail);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateRail);
+    };
+  }, [childIds, collapsed]);
 
   return (
-    <div className="space-y-1">
-      <article
-        id={`post-${post.id}`}
-        className="rounded-md px-3 py-2 transition-colors hover:bg-slate-50/60 dark:hover:bg-white/[0.03]"
-        style={{
-          borderLeftWidth: 2,
-          borderLeftStyle: "solid",
-          borderLeftColor: rail,
-        }}
+    <div ref={branchRef} className="relative flex" style={{ gap: RAIL_GAP }}>
+      {railSvg && (
+        <svg
+          aria-hidden="true"
+          className={`pointer-events-none absolute left-0 top-0 z-0 overflow-visible transition-colors ${
+            railHover
+              ? "text-slate-500 dark:text-slate-500"
+              : "text-slate-400/70 dark:text-[#3a3028]"
+          }`}
+          fill="none"
+          height={railSvg.height}
+          width={RAIL_CHILD_AVATAR_LEFT + 1}
+          viewBox={`0 0 ${RAIL_CHILD_AVATAR_LEFT + 1} ${railSvg.height}`}
+        >
+          <path
+            d={railSvg.d}
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1"
+          />
+        </svg>
+      )}
+      {/* Avatar + rail column — the rail runs from this comment's avatar down
+          its entire subtree as one continuous, fully-clickable line. */}
+      <div
+        className="relative flex shrink-0 flex-col items-center"
+        style={{ width: RAIL_AVATAR }}
       >
-        <div className="mb-1.5 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-            <button
-              type="button"
-              onClick={() => setCollapsed((c) => !c)}
-              aria-expanded={!collapsed}
-              title={collapsed ? "Expand comment" : "Collapse comment"}
-              className="inline-flex h-4 w-4 items-center justify-center rounded text-[13px] font-bold leading-none text-slate-400 transition hover:bg-slate-200/70 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-200"
-            >
-              {collapsed ? "+" : "−"}
-            </button>
+        {post.author_username ? (
+          <Link
+            to={`/user/${post.author_username}`}
+            className="relative z-10 transition hover:opacity-90"
+            title={post.author_username}
+          >
+            <UserAvatar
+              username={post.author_username}
+              avatarUrl={post.author_avatar_url}
+              avatarPreset={post.author_avatar_preset}
+              size="sm"
+            />
+          </Link>
+        ) : (
+          <span className="relative z-10">
+            <UserAvatar
+              username="Anonymous"
+              avatarUrl={null}
+              avatarPreset={null}
+              size="sm"
+            />
+          </span>
+        )}
+        {collapsed && children.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            aria-label="Expand thread"
+            title="Expand thread"
+            className="mt-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 bg-white text-[11px] font-bold leading-none text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 dark:border-[#4a3c31] dark:bg-[#18120f] dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-200"
+          >
+            +
+          </button>
+        )}
+        {!collapsed && children.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            onMouseEnter={() => setRailHover(true)}
+            onMouseLeave={() => setRailHover(false)}
+            onFocus={() => setRailHover(true)}
+            onBlur={() => setRailHover(false)}
+            aria-label="Collapse thread"
+            aria-expanded={true}
+            title="Collapse thread"
+            className="group relative mt-1 w-full flex-1 cursor-pointer outline-none"
+          >
+            {/* A left border (not a bg block) so it renders pixel-identically to
+                the child elbow's border — same width/anti-aliasing — and the two
+                read as one continuous line. Pinned to the avatar centre. */}
+            <span className="sr-only">Collapse thread</span>
+          </button>
+        )}
+      </div>
+
+      {/* Content column */}
+      <div className="min-w-0 flex-1">
+        <article
+          id={`post-${post.id}`}
+          className="rounded-md px-2 py-1"
+        >
+          <div className="mb-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
             {isUpdatesMode && (
               <span className="font-semibold text-slate-600 dark:text-slate-300">
                 Update {idxRoman}
@@ -1634,15 +1780,8 @@ function ReplyBranch({
                 <>
                   <Link
                     to={`/user/${post.author_username}`}
-                    className="inline-flex items-center gap-1.5 hover:underline"
+                    className="hover:underline"
                   >
-                    <UserAvatar
-                      username={post.author_username}
-                      avatarUrl={post.author_avatar_url}
-                      avatarPreset={post.author_avatar_preset}
-                      size="sm"
-                      className="h-5 w-5 text-[10px]"
-                    />
                     <span className={inlineUsernameClassName(post.author_role)}>
                       {post.author_username}
                     </span>
@@ -1658,18 +1797,7 @@ function ReplyBranch({
                   <RankerBadge rank={rankMap[post.author_username]} />
                 </>
               ) : (
-                <>
-                  <UserAvatar
-                    username="Anonymous"
-                    avatarUrl={null}
-                    avatarPreset={null}
-                    size="sm"
-                    className="h-5 w-5 text-[10px]"
-                  />
-                  <span className={inlineUsernameClassName(null)}>
-                    Anonymous
-                  </span>
-                </>
+                <span className={inlineUsernameClassName(null)}>Anonymous</span>
               )}
             </span>
             <span aria-hidden="true">·</span>
@@ -1688,42 +1816,7 @@ function ReplyBranch({
             )}
           </div>
 
-          {!collapsed && (
-          <div className="flex items-center gap-2 self-start">
-            {!locked && onQuote && (
-              <button
-                onClick={() => onQuote(post)}
-                className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:text-slate-400 dark:hover:bg-[#241d19]"
-                title="Quote this post in your reply"
-              >
-                Quote
-              </button>
-            )}
-            {canModify && !isEditingThis && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onBeginEdit(post.id, post.content_markdown)}
-                  className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:text-slate-200 dark:hover:bg-[#241d19]"
-                  title="Edit your post"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="inline-flex items-center rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-50"
-                  title={isAdmin ? "Admin delete" : "Delete your post"}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
-          )}
-        </div>
-
         {/* Content OR Editor */}
-        {!collapsed && (
-        <>
         {isEditingThis ? (
           <div className="mt-1">
             <RichReplyEditor
@@ -1782,6 +1875,23 @@ function ReplyBranch({
           />
 
           {/* Bookmark button — visible to authenticated users */}
+          {!isUpdatesMode ? (
+            !locked || isAdmin ? (
+              <button
+                type="button"
+                onClick={() => setReplyComposerOpen((open) => !open)}
+                aria-expanded={replyComposerOpen}
+                className="inline-flex items-center px-1.5 py-1 text-sm font-medium text-blue-700 transition hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+              >
+                Reply
+              </button>
+            ) : (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200">
+                Replies are locked.
+              </span>
+            )
+          ) : null}
+
           {currentUsername && (
             <button
               type="button"
@@ -1807,15 +1917,76 @@ function ReplyBranch({
           )}
 
           {/* Report button — visible to authenticated non-authors on unlocked threads */}
-          {currentUsername && currentUsername !== post.author_username && !reported && (
-            <button
-              type="button"
-              onClick={() => setReportFormOpen((o) => !o)}
-              className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-[#3a3028] dark:text-slate-400 dark:hover:border-rose-800/60 dark:hover:bg-rose-950/20 dark:hover:text-rose-400"
-              title="Report this post"
-            >
-              ⚑ Report
-            </button>
+          {(onQuote ||
+            (canModify && !isEditingThis) ||
+            (currentUsername &&
+              currentUsername !== post.author_username &&
+              !reported)) && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setActionMenuOpen((open) => !open)}
+                aria-expanded={actionMenuOpen}
+                aria-label="More comment actions"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-sm font-semibold text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:border-[#3a3028] dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-100"
+              >
+                ...
+              </button>
+              {actionMenuOpen && (
+                <div className="absolute right-0 z-30 mt-2 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-[#3a3028] dark:bg-[#18120f]">
+                  {!locked && onQuote && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionMenuOpen(false);
+                        onQuote(post);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-[#241d19]"
+                    >
+                      Quote
+                    </button>
+                  )}
+                  {canModify && !isEditingThis && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionMenuOpen(false);
+                        onBeginEdit(post.id, post.content_markdown);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-[#241d19]"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {canModify && !isEditingThis && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActionMenuOpen(false);
+                        handleDelete();
+                      }}
+                      className="block w-full px-3 py-2 text-left text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/20"
+                    >
+                      Delete
+                    </button>
+                  )}
+                  {currentUsername &&
+                    currentUsername !== post.author_username &&
+                    !reported && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActionMenuOpen(false);
+                          setReportFormOpen((open) => !open);
+                        }}
+                        className="block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-[#241d19]"
+                      >
+                        Report
+                      </button>
+                    )}
+                </div>
+              )}
+            </div>
           )}
 
           {reportFormOpen && !reported && (
@@ -1871,59 +2042,41 @@ function ReplyBranch({
             </div>
           )}
 
-          {!isUpdatesMode ? (
-            !locked || isAdmin ? (
-              <details
-                open={replyComposerOpen}
-                onToggle={(event) => {
-                  setReplyComposerOpen(event.currentTarget.open);
+          {!isUpdatesMode && replyComposerOpen && (!locked || isAdmin) && (
+            <div className="mt-2 w-full basis-full">
+              <RichReplyEditor
+                compact
+                threadId={threadId}
+                onCancel={() => setReplyComposerOpen(false)}
+                onSubmit={async (content, seriesIds) => {
+                  if (!content.trim()) {
+                    notify({
+                      message: "Reply cannot be empty.",
+                      title: "Cannot post",
+                      variant: "warning",
+                    });
+                    return;
+                  }
+                  try {
+                    const createdPost = await createForumPost(threadId, {
+                      content_markdown: content.trim(),
+                      series_ids: seriesIds,
+                      parent_id: post.id,
+                    });
+                    setReplyComposerOpen(false);
+                    onPostCreated(createdPost);
+                  } catch (err: unknown) {
+                    notify({
+                      message: getErrorMessage(err) || "Failed to post reply.",
+                      title: "Post failed",
+                      variant: "error",
+                    });
+                  }
                 }}
-                className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.96),_rgba(18,15,12,0.96))]"
-              >
-                <summary className="cursor-pointer list-none text-xs font-medium text-blue-700 marker:hidden dark:text-blue-300">
-                  Reply
-                </summary>
-                <div className="mt-3">
-                  <RichReplyEditor
-                    compact
-                    threadId={threadId}
-                    onSubmit={async (content, seriesIds) => {
-                      if (!content.trim()) {
-                        notify({
-                          message: "Reply cannot be empty.",
-                          title: "Cannot post",
-                          variant: "warning",
-                        });
-                        return;
-                      }
-                      try {
-                        const createdPost = await createForumPost(threadId, {
-                          content_markdown: content.trim(),
-                          series_ids: seriesIds,
-                          parent_id: post.id,
-                        });
-                        setReplyComposerOpen(false);
-                        onPostCreated(createdPost);
-                      } catch (err: unknown) {
-                        notify({
-                          message: getErrorMessage(err) || "Failed to post reply.",
-                          title: "Post failed",
-                          variant: "error",
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              </details>
-            ) : (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200">
-                Replies are locked.
-              </span>
-            )
-          ) : null}
+              />
+            </div>
+          )}
         </div>
-        </>
-        )}
       </article>
 
       <ConfirmModal
@@ -1948,44 +2101,44 @@ function ReplyBranch({
         onConfirm={actuallyDelete}
       />
 
-      {!collapsed && children.length > 0 && (
-        <div
-          className={
-            "border-l border-slate-200/70 pl-1.5 dark:border-[#3a3028] sm:pl-2 " +
-            // Cap the accumulating indent on deep threads so they don't run
-            // off-screen (especially on mobile); the rail still shows nesting.
-            (depth >= 6 ? "ml-1" : "ml-2.5 sm:ml-3")
-          }
-        >
-          {children.map((child) => (
-            <ReplyBranch
-              key={child.id}
-              post={child}
-              depth={depth + 1}
-          topIndex={topIndex}
-          byParent={byParent}
-          threadId={threadId}
-          reload={reload}
-          isAdmin={isAdmin}
-          currentUsername={currentUsername}
-          locked={locked}
-          isUpdatesMode={isUpdatesMode}
-          // 🔽 pass edit props down the tree as well
-          editingPostId={editingPostId}
-          editInitial={editInitial}
-          onBeginEdit={onBeginEdit}
-          onSaveEdit={onSaveEdit}
-          onCancelEdit={onCancelEdit}
-          onPostCreated={onPostCreated}
-              onQuote={onQuote}
-              notify={notify}
-              rankMap={rankMap}
-              opUsername={opUsername}
-            />
-          ))}
+        {!collapsed && children.length > 0 && (
+          <div className="mt-1 space-y-1">
+            {children.map((child) => (
+              <div
+                key={child.id}
+                ref={(node) => {
+                  childRefs.current[child.id] = node;
+                }}
+              >
+                <ReplyBranch
+                  post={child}
+                  depth={depth + 1}
+                  topIndex={topIndex}
+                  byParent={byParent}
+                  threadId={threadId}
+                  reload={reload}
+                  isAdmin={isAdmin}
+                  currentUsername={currentUsername}
+                  locked={locked}
+                  isUpdatesMode={isUpdatesMode}
+                  editingPostId={editingPostId}
+                  editInitial={editInitial}
+                  onBeginEdit={onBeginEdit}
+                  onSaveEdit={onSaveEdit}
+                  onCancelEdit={onCancelEdit}
+                  onPostCreated={onPostCreated}
+                  onQuote={onQuote}
+                  notify={notify}
+                  rankMap={rankMap}
+                  opUsername={opUsername}
+                  connected
+                />
+              </div>
+            ))}
+          </div>
+        )}
         </div>
-      )}
-    </div>
+      </div>
   );
 }
 
