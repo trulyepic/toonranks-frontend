@@ -14,6 +14,8 @@ import {
   createForumCategory,
   updateForumCategory,
   deleteForumCategory,
+  fetchMyFollowing,
+  fetchMyBookmarks,
 } from "../api/manApi";
 import {
   Link,
@@ -193,6 +195,11 @@ export default function ForumPage() {
   const [confirmThread, setConfirmThread] = useState<ForumThread | null>(null);
   const { user } = useUser();
   const [view, setView] = useState<ForumView>("discover");
+  const [personalCounts, setPersonalCounts] = useState<{
+    following?: number;
+    saved?: number;
+    loading: boolean;
+  }>({ loading: false });
   const notice = useNotice();
   const [rankMap, setRankMap] = useState<Record<string, number>>({});
 
@@ -243,6 +250,36 @@ export default function ForumPage() {
   useEffect(() => {
     getTopRankMap().then(setRankMap).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setPersonalCounts({ loading: false });
+      return;
+    }
+
+    let cancelled = false;
+    setPersonalCounts((prev) => ({ ...prev, loading: true }));
+
+    Promise.all([fetchMyFollowing(1, 1), fetchMyBookmarks(1, 1)])
+      .then(([following, saved]) => {
+        if (!cancelled) {
+          setPersonalCounts({
+            following: following.total,
+            saved: saved.total,
+            loading: false,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPersonalCounts((prev) => ({ ...prev, loading: false }));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // keep URL as the source of truth for the current page
   useEffect(() => {
@@ -381,9 +418,17 @@ export default function ForumPage() {
           {(
             [
               { key: "discover", label: "Discover" },
-              { key: "following", label: "Following" },
-              { key: "saved", label: "Saved" },
-            ] as { key: ForumView; label: string }[]
+              {
+                key: "following",
+                label: "Following",
+                count: personalCounts.following,
+              },
+              {
+                key: "saved",
+                label: "Bookmarked",
+                count: personalCounts.saved,
+              },
+            ] as { key: ForumView; label: string; count?: number }[]
           ).map((tab) => (
             <button
               key={tab.key}
@@ -395,6 +440,19 @@ export default function ForumPage() {
               }`}
             >
               {tab.label}
+              {tab.key !== "discover" ? (
+                <span
+                  className={`ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] leading-none ${
+                    view === tab.key
+                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100"
+                      : "bg-slate-100 text-slate-500 dark:bg-[#241d19] dark:text-stone-400"
+                  }`}
+                >
+                  {personalCounts.loading && tab.count === undefined
+                    ? "..."
+                    : tab.count ?? 0}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>
