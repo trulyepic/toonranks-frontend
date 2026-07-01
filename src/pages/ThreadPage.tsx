@@ -83,13 +83,6 @@ const pillAmber = "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber
 const pillIndigo = "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-300";
 const pillRose = "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-950/50";
 
-const ctrlGroup =
-  "flex items-center gap-1 rounded-full border border-gray-200 bg-white p-1 shadow-sm dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.96),_rgba(21,17,14,0.96))]";
-const ctrlBtn =
-  "inline-flex items-center gap-1 h-7 px-3 rounded-full text-xs border border-transparent hover:bg-gray-50 text-gray-700 dark:text-slate-200 dark:hover:bg-[#241d19]";
-const ctrlActiveAmber = "bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300";
-const ctrlActiveIndigo = "bg-indigo-50 border-indigo-300 text-indigo-800 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300";
-
 type AxiosLike = {
   message?: string;
   response?: { data?: { detail?: unknown } };
@@ -918,73 +911,42 @@ export default function ThreadPage() {
               </Link>
 
               {isAdmin && (
-                <div className={ctrlGroup}>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const next = !thread!.locked;
-                      try {
-                        await lockForumThread(thread!.id, next);
-                        setThread((t) => (t ? { ...t, locked: next } : t));
-                      } catch (e) {
-                        // alert(
-                        //   (e as { message?: string }).message ||
-                        //     "Failed to toggle lock."
-                        // );
-                        notice.show({
-                          message:
-                            (e as { message?: string }).message ||
-                            "Failed to toggle lock.",
-                          title: "Action failed",
-                          variant: "error",
-                        });
-                      }
-                    }}
-                    className={`${ctrlBtn} ${
-                      thread?.locked ? ctrlActiveAmber : ""
-                    }`}
-                    title={thread?.locked ? "Unlock thread" : "Lock thread"}
-                  >
-                    {thread?.locked ? "Unlock" : "Lock"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const next = !thread!.latest_first;
-                      try {
-                        await updateForumThreadSettings(thread!.id, {
-                          latest_first: next,
-                        });
-                        setThread((t) =>
-                          t ? { ...t, latest_first: next } : t
-                        );
-                      } catch (e) {
-                        // alert(
-                        //   (e as { message?: string }).message ||
-                        //     "Failed to update ordering."
-                        // );
-                        notice.show({
-                          message:
-                            (e as { message?: string }).message ||
-                            "Failed to update ordering.",
-                          title: "Action failed",
-                          variant: "error",
-                        });
-                      }
-                    }}
-                    className={`${ctrlBtn} ${
-                      thread?.latest_first ? ctrlActiveIndigo : ""
-                    }`}
-                    title={
-                      thread?.latest_first
-                        ? "Show oldest first"
-                        : "Show latest first"
+                <ThreadAdminMenu
+                  locked={!!thread?.locked}
+                  latestFirst={!!thread?.latest_first}
+                  onToggleLock={async () => {
+                    const next = !thread!.locked;
+                    try {
+                      await lockForumThread(thread!.id, next);
+                      setThread((t) => (t ? { ...t, locked: next } : t));
+                    } catch (e) {
+                      notice.show({
+                        message:
+                          (e as { message?: string }).message ||
+                          "Failed to toggle lock.",
+                        title: "Action failed",
+                        variant: "error",
+                      });
                     }
-                  >
-                    {thread?.latest_first ? "Oldest first" : "Latest first"}
-                  </button>
-                </div>
+                  }}
+                  onToggleLatestFirst={async () => {
+                    const next = !thread!.latest_first;
+                    try {
+                      await updateForumThreadSettings(thread!.id, {
+                        latest_first: next,
+                      });
+                      setThread((t) => (t ? { ...t, latest_first: next } : t));
+                    } catch (e) {
+                      notice.show({
+                        message:
+                          (e as { message?: string }).message ||
+                          "Failed to update ordering.",
+                        title: "Action failed",
+                        variant: "error",
+                      });
+                    }
+                  }}
+                />
               )}
             </div>
           </div>
@@ -1401,6 +1363,85 @@ export default function ThreadPage() {
         variant={notice.variant}
         onClose={notice.hide}
       />
+    </div>
+  );
+}
+
+/** Admin "⋯" overflow for thread-level moderation (Lock, reply ordering). */
+function ThreadAdminMenu({
+  locked,
+  latestFirst,
+  onToggleLock,
+  onToggleLatestFirst,
+}: {
+  locked: boolean;
+  latestFirst: boolean;
+  onToggleLock: () => void;
+  onToggleLatestFirst: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const itemClass =
+    "block w-full px-3 py-2 text-left text-xs font-medium text-slate-600 transition hover:bg-slate-50 dark:text-stone-200 dark:hover:bg-[#241d19]";
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-label="Thread admin actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={`${pillBase} border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-slate-300 dark:hover:bg-[#241d19]`}
+      >
+        ⋯
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(30,24,20,0.99),rgba(21,17,14,0.99))]"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onToggleLock();
+            }}
+            className={itemClass}
+          >
+            {locked ? "Unlock thread" : "Lock thread"}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onToggleLatestFirst();
+            }}
+            className={itemClass}
+          >
+            {latestFirst ? "Show oldest first" : "Show latest first"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
