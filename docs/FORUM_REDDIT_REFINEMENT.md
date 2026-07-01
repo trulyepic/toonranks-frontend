@@ -111,6 +111,23 @@ These are the product decisions; re-implement them with RN primitives
    (threads list to return `first_post_excerpt`). Do once, both clients
    benefit.
 
+## 3b. Follow-up pass (branch `forum-refinement-followups`)
+
+A second review after the first branch merged found and fixed:
+
+- **Reply-count off-by-one in the personal feeds and thread headers.**
+  `post_count` includes the OP; the Following tab said "N replies" using the
+  raw count. Fixed in `src/components/ForumPersonalFeed.tsx` (and the mobile
+  counterparts) with `max(0, post_count - 1)`.
+- **Personal feeds silently capped at 20.** Following/Bookmarked fetched only
+  page 1. Both lists now accumulate pages with a "Load more" button driven by
+  `has_next`.
+- **Personal feed rows flattened** into the same divided-container style as the
+  Discover feed (one rounded container, hairline dividers, hover bg).
+- **Thread page admin controls behind an overflow.** The Lock / Latest-first
+  pill group in the thread header became a "⋯" menu (`ThreadAdminMenu` in
+  `ThreadPage.tsx`), matching the feed's kebab pattern.
+
 ## 4. Verification done on this branch
 
 - `npm run lint` and `npm run build` clean (pre-existing fast-refresh warnings
