@@ -37,6 +37,7 @@ import UserAvatar from "../components/UserAvatar";
 import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { getTopRankMap } from "../util/rankMap";
+import { timeAgo, fullTimestamp } from "../util/timeAgo";
 import MarkdownToolbar from "../components/MarkdownToolbar";
 import ForumPersonalFeed from "../components/ForumPersonalFeed";
 
@@ -183,7 +184,6 @@ export function meta() {
 export default function ForumPage() {
   const navigate = useNavigate();
   const forumData = useLoaderData() as ForumLoaderData | null;
-  const [q, setQ] = useState("");
   const [threads, setThreads] = useState<ForumThread[]>(
     forumData?.threads ?? []
   );
@@ -203,7 +203,6 @@ export default function ForumPage() {
   const notice = useNotice();
   const [rankMap, setRankMap] = useState<Record<string, number>>({});
 
-  const [page, setPage] = useState(1);
   const [pageSize] = useState(FORUM_PAGE_SIZE); // tweak if you like
   const [total, setTotal] = useState(forumData?.total ?? 0);
   const [totalPages, setTotalPages] = useState(forumData?.totalPages ?? 1);
@@ -213,22 +212,74 @@ export default function ForumPage() {
 
   type SortOption = "activity" | "newest" | "replies";
   const SORT_KEY = "forum_sort";
-  const [sortBy, setSortBy] = useState<SortOption>(
-    () =>
-      (typeof window !== "undefined"
-        ? (sessionStorage.getItem(SORT_KEY) as SortOption | null)
-        : null) ?? "activity"
-  );
+  const SORT_OPTIONS: SortOption[] = ["activity", "newest", "replies"];
+
+  // URL is the source of truth for q / sort / category / page so the view is
+  // shareable and survives refresh/back. sessionStorage only provides the
+  // default sort when the URL has none.
+  const q = searchParams.get("q") ?? "";
+  const rawPage = parseInt(searchParams.get("page") || "1", 10);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+  const urlSort = searchParams.get("sort") as SortOption | null;
+  const storedSort =
+    typeof window !== "undefined"
+      ? (sessionStorage.getItem(SORT_KEY) as SortOption | null)
+      : null;
+  const sortBy: SortOption =
+    urlSort && SORT_OPTIONS.includes(urlSort)
+      ? urlSort
+      : storedSort && SORT_OPTIONS.includes(storedSort)
+      ? storedSort
+      : "activity";
+  const activeCategorySlug = searchParams.get("category");
+
+  // Local input state, debounced into the URL (and thus into the fetch).
+  const [qInput, setQInput] = useState(q);
+
+  const writeParams = (patch: {
+    q?: string;
+    sort?: SortOption;
+    category?: string | null;
+    page?: number;
+  }) => {
+    const nq = (patch.q !== undefined ? patch.q : q).trim();
+    const nsort = patch.sort ?? sortBy;
+    const ncat = patch.category !== undefined ? patch.category : activeCategorySlug;
+    const npage = patch.page ?? page;
+    const next: Record<string, string> = {};
+    if (nq) next.q = nq;
+    if (nsort !== "activity") next.sort = nsort;
+    if (ncat) next.category = ncat;
+    if (npage > 1) next.page = String(npage);
+    setSearchParams(next);
+  };
+
+  // Debounce search keystrokes → URL (300 ms) instead of fetching per key.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (qInput.trim() !== q) writeParams({ q: qInput, page: 1 });
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qInput]);
+
+  // Sync the input when the URL changes underneath us (back button, shared link).
+  useEffect(() => {
+    setQInput(q);
+  }, [q]);
 
   // Skip the first client load when the server already seeded the default thread
   // list (so we don't refetch/flash on hydration). Only when on the server's
-  // defaults — a stored non-default sort still triggers a refetch.
+  // defaults — a non-default URL/sort still triggers a refetch.
   const skipInitialLoad = useRef(
-    Boolean(forumData?.threads?.length) && sortBy === "activity"
+    Boolean(forumData?.threads?.length) &&
+      q === "" &&
+      !activeCategorySlug &&
+      sortBy === "activity" &&
+      page === 1
   );
 
   const [categories, setCategories] = useState<ForumCategory[]>([]);
-  const [activeCategorySlug, setActiveCategorySlug] = useState<string | null>(null);
   const activeCategory = categories.find((c) => c.slug === activeCategorySlug) ?? null;
   const [showCategoryManager, setShowCategoryManager] = useState(false);
 
@@ -280,12 +331,6 @@ export default function ForumPage() {
       cancelled = true;
     };
   }, [user?.id]);
-
-  // keep URL as the source of truth for the current page
-  useEffect(() => {
-    const p = parseInt(searchParams.get("page") || "1", 10);
-    setPage(Number.isFinite(p) && p > 0 ? p : 1);
-  }, [searchParams]);
 
   // const load = async () => {
   //   const data = await listForumThreads(q);
@@ -369,47 +414,36 @@ export default function ForumPage() {
 
   const goToPage = (p: number) => {
     const next = Math.max(1, Math.min(totalPages, p));
-    const qp: Record<string, string> = {};
-    if (q.trim()) qp.q = q.trim();
-    qp.page = String(next);
-    setSearchParams(qp);
+    writeParams({ page: next });
     // `useEffect` above will react to this and call load()
   };
 
   return (
     <div className="relative mx-auto max-w-5xl bg-[radial-gradient(900px_260px_at_50%_-100px,rgba(99,102,241,0.10),transparent)] px-3 py-6 dark:bg-[radial-gradient(1100px_320px_at_50%_-120px,rgba(76,175,149,0.12),transparent)] sm:px-6 sm:py-8">
-      <div className="mb-4 rounded-[2rem] border border-slate-200/80 bg-white/80 px-4 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-[#3a3028] dark:bg-[linear-gradient(135deg,rgba(31,25,21,0.98),rgba(22,18,15,0.97)_58%,rgba(18,33,28,0.72))] dark:shadow-[0_20px_55px_rgba(0,0,0,0.6)] sm:mb-6 sm:px-6 sm:py-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-emerald-200/75">
-              Community
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">
-                Forum
-              </h1>
-              <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-stone-300 sm:text-[15px]">
-                Follow updates, start discussions, and keep series talk in one
-                place.
-              </p>
-            </div>
-          </div>
-          <div className="flex w-full items-center gap-2 sm:w-auto">
-            {isAdmin && (
-              <button
-                onClick={() => setShowCategoryManager(true)}
-                className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-200 dark:hover:bg-[#241d19] sm:flex-none"
-              >
-                ⚙ Categories
-              </button>
-            )}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+            Forum
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-stone-300">
+            Follow updates, start discussions, and keep series talk in one place.
+          </p>
+        </div>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          {isAdmin && (
             <button
-              onClick={onClickNewThread}
-              className="inline-flex flex-1 items-center justify-center rounded-full bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 sm:flex-none"
+              onClick={() => setShowCategoryManager(true)}
+              className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-200 dark:hover:bg-[#241d19] sm:flex-none"
             >
-              New Thread
+              ⚙ Categories
             </button>
-          </div>
+          )}
+          <button
+            onClick={onClickNewThread}
+            className="inline-flex flex-1 items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.28)] transition hover:bg-blue-700 sm:flex-none"
+          >
+            New Thread
+          </button>
         </div>
       </div>
 
@@ -464,49 +498,16 @@ export default function ForumPage() {
 
       {view === "discover" && (
         <>
-      <div className="mb-4 flex flex-col gap-4 rounded-[1.75rem] border border-slate-200/80 bg-white/80 px-4 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-sm dark:border-[#3a3028] dark:bg-[linear-gradient(140deg,rgba(27,22,19,0.98),rgba(18,15,13,0.97)_62%,rgba(20,33,28,0.66))] dark:shadow-[0_18px_50px_rgba(0,0,0,0.6)] sm:px-6 sm:py-5">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-stone-300">
-          Showing <strong>{threads.length}</strong> of <strong>{total}</strong>
-          <span>{resultsLabel}</span>
-          {totalPages > 1 && (
-            <>
-              {" "}
-              - page {page} of {totalPages}
-            </>
-          )}
-          {/* summary badge */}
-          {user && myThreadCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/30 dark:text-emerald-200">
-              Your threads <strong>{myThreadCount}</strong>
-            </span>
-          )}
-        </div>
-        {totalPages > 1 && (
-          // <Pager page={page} totalPages={totalPages} onGo={goToPage} />
-          <div className="overflow-x-auto pb-1">
-            <Pager
-              page={page}
-              totalPages={totalPages}
-              hasPrev={hasPrev}
-              hasNext={hasNext}
-              onGo={goToPage}
-            />
-          </div>
-        )}
-
+      {/* Toolbar: search + sort + categories + result count in one card */}
+      <div className="mb-4 flex flex-col gap-3 rounded-[1.5rem] border border-slate-200/80 bg-white/80 px-4 py-4 shadow-sm backdrop-blur-sm dark:border-[#3a3028] dark:bg-[linear-gradient(140deg,rgba(27,22,19,0.98),rgba(18,15,13,0.97)_62%,rgba(20,33,28,0.66))] sm:px-5">
         <input
-          value={q}
-          onChange={(e) => { setQ(e.target.value); setSearchParams({ page: "1" }); }}
+          value={qInput}
+          onChange={(e) => setQInput(e.target.value)}
           placeholder="Search threads..."
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]"
         />
-      </div>
 
-      {/* Sort + Category controls */}
-      <div className="flex flex-col gap-3 pb-2">
-
-        {/* Sort row */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Sort:</span>
           {(
             [
@@ -520,8 +521,7 @@ export default function ForumPage() {
               onClick={() => {
                 if (sortBy === value) return;
                 sessionStorage.setItem(SORT_KEY, value);
-                setSortBy(value);
-                setSearchParams({ page: "1" });
+                writeParams({ sort: value, page: 1 });
               }}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                 sortBy === value
@@ -532,14 +532,15 @@ export default function ForumPage() {
               {label}
             </button>
           ))}
-        </div>
 
-        {/* Category row */}
-        {categories.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap gap-2">
+          {categories.length > 0 && (
+            <>
+              <span
+                aria-hidden
+                className="mx-1 hidden h-4 w-px bg-slate-200 dark:bg-[#3a3028] sm:inline-block"
+              />
               <button
-                onClick={() => { setActiveCategorySlug(null); setSearchParams({ page: "1" }); }}
+                onClick={() => writeParams({ category: null, page: 1 })}
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                   activeCategorySlug === null
                     ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
@@ -551,7 +552,7 @@ export default function ForumPage() {
               {categories.map((cat) => (
                 <button
                   key={cat.slug}
-                  onClick={() => { setActiveCategorySlug(cat.slug); setSearchParams({ page: "1" }); }}
+                  onClick={() => writeParams({ category: cat.slug, page: 1 })}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                     activeCategorySlug === cat.slug
                       ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200"
@@ -562,19 +563,48 @@ export default function ForumPage() {
                   <span className="ml-1 opacity-50">({cat.thread_count})</span>
                 </button>
               ))}
-            </div>
-            {activeCategory?.description && (
-              <p className="text-xs text-slate-400 dark:text-slate-500">{activeCategory.description}</p>
-            )}
-          </div>
+            </>
+          )}
+        </div>
+
+        {activeCategory?.description && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">{activeCategory.description}</p>
         )}
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-stone-400">
+          <span>
+            <strong>{total}</strong> {resultsLabel}
+            {totalPages > 1 && <> · page {page} of {totalPages}</>}
+          </span>
+          {user && myThreadCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 font-medium text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/30 dark:text-emerald-200">
+              Your threads <strong>{myThreadCount}</strong>
+            </span>
+          )}
+        </div>
       </div>
 
-      <ul className="space-y-3">
+      {/* TOP pager */}
+      {totalPages > 1 && (
+        <div className="mb-4 overflow-x-auto pb-1">
+          <Pager
+            page={page}
+            totalPages={totalPages}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            onGo={goToPage}
+          />
+        </div>
+      )}
+
+      {/* Flat feed: one container, divided rows (Reddit-style density) */}
+      <ul className="overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/70 shadow-sm backdrop-blur-sm dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(27,22,19,0.98),rgba(20,16,13,0.98))]">
         {threads.map((t) => {
           const isOwner = t.author_username === myName;
-          const canDelete = isAdmin || isOwner;
+          const canManage = isAdmin || isOwner;
           const isPinned = !!t.is_pinned;
+          const replyCount = Math.max(0, (t.post_count ?? 1) - 1);
+          const MAX_ROW_PILLS = 3;
 
           return (
             <li
@@ -596,136 +626,18 @@ export default function ForumPage() {
                   navigate(`/forum/${t.id}`);
                 }
               }}
-              className={`cursor-pointer rounded-[1.75rem] border p-4 shadow-sm ring-1 ring-black/5 backdrop-blur-md transition hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-200 dark:ring-[rgba(255,255,255,0.03)] dark:shadow-[0_16px_36px_rgba(0,0,0,0.4)] dark:focus:ring-blue-950/50 ${
+              className={`cursor-pointer border-b border-slate-100 px-4 py-3 transition last:border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-300 dark:border-[#2b231d] ${
                 isPinned
-                  ? "border-l-4 border-amber-300 bg-amber-50/60 hover:bg-amber-50/80 dark:border-amber-700/70 dark:bg-[linear-gradient(145deg,rgba(40,30,10,0.98),rgba(28,21,8,0.98))] dark:hover:bg-[linear-gradient(145deg,rgba(48,36,12,0.98),rgba(34,25,10,0.98))]"
-                  : "border-white/70 bg-white/40 hover:bg-white/60 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(29,24,20,0.98),rgba(21,17,14,0.98))] dark:hover:bg-[linear-gradient(145deg,rgba(35,28,23,0.98),rgba(24,20,16,0.98))]"
+                  ? "border-l-[3px] border-l-amber-400 bg-amber-50/50 hover:bg-amber-50/80 dark:border-l-amber-600 dark:bg-amber-950/15 dark:hover:bg-amber-950/25"
+                  : "hover:bg-slate-50/80 dark:hover:bg-[#241d19]"
               }`}
             >
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <Link
-                      to={`/forum/${t.id}`}
-                      className={`text-base leading-6 hover:underline dark:text-stone-50 sm:text-lg ${
-                        user && t.has_unread
-                          ? "font-bold text-slate-950 dark:text-white"
-                          : "font-semibold text-slate-900 dark:text-stone-50"
-                      }`}
-                    >
-                      {isPinned && <span className="mr-1">📌</span>}
-                      {stripMdHeading(t.title)}
-                    </Link>
-                    {user && t.has_unread && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                        {t.unread_count ? `${t.unread_count} new` : "New"}
-                      </span>
-                    )}
-                  </div>
-
-                  {(canDelete || isAdmin) && (
-                    <div className="flex items-center gap-2 self-start sm:self-auto">
-                      {canDelete && (
-                        <button
-                          type="button"
-                          title="Edit thread"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setEditingThread(t);
-                            setEditingBody("");
-                            (async () => {
-                              try {
-                                const data = await getForumThread(t.id);
-                                setEditingBody(
-                                  data.posts?.[0]?.content_markdown ?? ""
-                                );
-                              } catch {
-                                // silent; keep empty body if fetch fails
-                              }
-                            })();
-                          }}
-                          className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-[#3a3028] dark:text-stone-200 dark:hover:bg-[linear-gradient(145deg,_rgba(34,47,83,0.8),_rgba(24,31,55,0.8))] dark:hover:text-blue-200"
-                        >
-                          Edit
-                        </button>
-                      )}
-
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          title={isPinned ? "Unpin thread" : "Pin thread"}
-                          onClick={async (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Optimistic update
-                            setThreads((prev) =>
-                              prev.map((th) =>
-                                th.id === t.id
-                                  ? { ...th, is_pinned: !isPinned }
-                                  : th
-                              )
-                            );
-                            try {
-                              await setThreadPin(t.id, !isPinned);
-                            } catch {
-                              // Revert on error
-                              setThreads((prev) =>
-                                prev.map((th) =>
-                                  th.id === t.id
-                                    ? { ...th, is_pinned: isPinned }
-                                    : th
-                                )
-                              );
-                              notice.show({
-                                title: "Action failed",
-                                message: "Could not update pin status.",
-                                variant: "error",
-                              });
-                            }
-                          }}
-                          className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                            isPinned
-                              ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-300"
-                              : "border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-[#3a3028] dark:text-stone-200 dark:hover:border-amber-700/60 dark:hover:bg-amber-950/30 dark:hover:text-amber-300"
-                          }`}
-                        >
-                          {isPinned ? "📌 Pinned" : "Pin"}
-                        </button>
-                      )}
-
-                      {canDelete && !t.locked && (
-                        <button
-                          type="button"
-                          title="Delete thread"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onDeleteThread(t);
-                          }}
-                          disabled={deletingId === t.id}
-                          className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                            deletingId === t.id
-                              ? "cursor-not-allowed border-slate-200 text-slate-400 dark:border-[#3a3028] dark:text-slate-500"
-                              : "border-slate-200 text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:border-[#3a3028] dark:text-stone-200 dark:hover:bg-red-950/30 dark:hover:text-red-300"
-                          }`}
-                        >
-                          {deletingId === t.id ? "Deleting..." : "Delete"}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-stone-400">
-                    <span>
-                      {t.post_count} posts - updated{" "}
-                      {new Date(t.updated_at).toLocaleString()}
-                    </span>
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  {/* Meta line: author · time-ago, then status chips */}
+                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 dark:text-stone-400">
                     {t.author_username ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span>- by</span>
+                      <>
                         <Link
                           to={`/user/${t.author_username}`}
                           onClick={(e) => e.stopPropagation()}
@@ -736,7 +648,7 @@ export default function ForumPage() {
                             avatarUrl={t.author_avatar_url}
                             avatarPreset={t.author_avatar_preset}
                             size="sm"
-                            className="h-6 w-6 text-[10px]"
+                            className="h-5 w-5 text-[9px]"
                           />
                           <span
                             className={`font-medium ${inlineUsernameClassName(
@@ -747,36 +659,129 @@ export default function ForumPage() {
                           </span>
                         </Link>
                         <RankerBadge rank={rankMap[t.author_username]} />
+                      </>
+                    ) : (
+                      <span>Anonymous</span>
+                    )}
+                    <span aria-hidden="true">·</span>
+                    <span
+                      suppressHydrationWarning
+                      title={fullTimestamp(t.updated_at)}
+                    >
+                      {timeAgo(t.updated_at)}
+                    </span>
+
+                    {isPinned && (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/35 dark:text-amber-200">
+                        Pinned
                       </span>
-                    ) : null}
+                    )}
+                    {t.locked && (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/35 dark:text-amber-200">
+                        Locked
+                      </span>
+                    )}
+                    {!activeCategorySlug && t.category_name && (
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-[#241d19] dark:text-slate-300">
+                        {t.category_name}
+                      </span>
+                    )}
                   </div>
 
-                  {isPinned && (
-                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:bg-amber-950/35 dark:text-amber-200">
-                      Pinned
-                    </span>
-                  )}
+                  {/* Title */}
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Link
+                      to={`/forum/${t.id}`}
+                      className={`text-base leading-6 hover:underline dark:text-stone-50 ${
+                        user && t.has_unread
+                          ? "font-bold text-slate-950 dark:text-white"
+                          : "font-semibold text-slate-900 dark:text-stone-50"
+                      }`}
+                    >
+                      {stripMdHeading(t.title)}
+                    </Link>
+                    {user && t.has_unread && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                        {t.unread_count ? `${t.unread_count} new` : "New"}
+                      </span>
+                    )}
+                  </div>
 
-                  {!activeCategorySlug && t.category_name && (
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600 dark:bg-[#241d19] dark:text-slate-300">
-                      {t.category_name}
-                    </span>
-                  )}
-
-                  {t.locked && (
-                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:bg-amber-950/35 dark:text-amber-200">
-                      Locked
-                    </span>
-                  )}
+                  {/* Series refs, capped */}
+                  {t.series_refs?.length ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {t.series_refs.slice(0, MAX_ROW_PILLS).map((s) => (
+                        <SeriesRefPill key={s.series_id} s={s} />
+                      ))}
+                      {t.series_refs.length > MAX_ROW_PILLS && (
+                        <span className="text-xs text-slate-400 dark:text-stone-500">
+                          +{t.series_refs.length - MAX_ROW_PILLS} more
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
 
-                {t.series_refs?.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {t.series_refs.map((s) => (
-                      <SeriesRefPill key={s.series_id} s={s} />
-                    ))}
-                  </div>
-                ) : null}
+                {/* Right rail: reply count + actions */}
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-[#241d19] dark:text-stone-300"
+                    title={`${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
+                  >
+                    💬 {replyCount}
+                  </span>
+                  {canManage && (
+                    <ThreadRowMenu
+                      canEdit={canManage}
+                      isAdmin={isAdmin}
+                      isPinned={isPinned}
+                      locked={!!t.locked}
+                      deleting={deletingId === t.id}
+                      onEdit={() => {
+                        setEditingThread(t);
+                        setEditingBody("");
+                        (async () => {
+                          try {
+                            const data = await getForumThread(t.id);
+                            setEditingBody(
+                              data.posts?.[0]?.content_markdown ?? ""
+                            );
+                          } catch {
+                            // silent; keep empty body if fetch fails
+                          }
+                        })();
+                      }}
+                      onTogglePin={async () => {
+                        // Optimistic update
+                        setThreads((prev) =>
+                          prev.map((th) =>
+                            th.id === t.id
+                              ? { ...th, is_pinned: !isPinned }
+                              : th
+                          )
+                        );
+                        try {
+                          await setThreadPin(t.id, !isPinned);
+                        } catch {
+                          // Revert on error
+                          setThreads((prev) =>
+                            prev.map((th) =>
+                              th.id === t.id
+                                ? { ...th, is_pinned: isPinned }
+                                : th
+                            )
+                          );
+                          notice.show({
+                            title: "Action failed",
+                            message: "Could not update pin status.",
+                            variant: "error",
+                          });
+                        }
+                      }}
+                      onDelete={() => onDeleteThread(t)}
+                    />
+                  )}
+                </div>
               </div>
             </li>
           );
@@ -909,6 +914,122 @@ export default function ForumPage() {
           onClose={() => setShowCategoryManager(false)}
           onChanged={reloadCategories}
         />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Per-row "⋯" overflow menu for owner/admin thread actions
+// ─────────────────────────────────────────────
+function ThreadRowMenu({
+  canEdit,
+  isAdmin,
+  isPinned,
+  locked,
+  deleting,
+  onEdit,
+  onTogglePin,
+  onDelete,
+}: {
+  canEdit: boolean;
+  isAdmin: boolean;
+  isPinned: boolean;
+  locked: boolean;
+  deleting: boolean;
+  onEdit: () => void;
+  onTogglePin: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const itemClass =
+    "block w-full px-3 py-2 text-left text-xs font-medium text-slate-600 transition hover:bg-slate-50 dark:text-stone-200 dark:hover:bg-[#241d19]";
+
+  return (
+    <div
+      ref={rootRef}
+      className="relative"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        aria-label="Thread actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.preventDefault();
+          setOpen((o) => !o);
+        }}
+        className="inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:text-stone-500 dark:hover:bg-[#241d19] dark:hover:text-stone-300"
+      >
+        ⋯
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(30,24,20,0.99),rgba(21,17,14,0.99))]"
+        >
+          {canEdit && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onEdit();
+              }}
+              className={itemClass}
+            >
+              Edit
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onTogglePin();
+              }}
+              className={itemClass}
+            >
+              {isPinned ? "Unpin" : "Pin"}
+            </button>
+          )}
+          {canEdit && !locked && (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={deleting}
+              onClick={() => {
+                setOpen(false);
+                onDelete();
+              }}
+              className={`${itemClass} text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30 ${
+                deleting ? "cursor-not-allowed opacity-50" : ""
+              }`}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
