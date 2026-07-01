@@ -53,25 +53,38 @@ function hasMarkdownImage(markdown: string): boolean {
  *
  * Client-only (rendered behind an auth gate), so no SSR/loader wiring needed.
  */
+const PERSONAL_PAGE_SIZE = 20;
+
 export default function ForumPersonalFeed({ view }: { view: PersonalView }) {
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [posts, setPosts] = useState<ForumPost[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
+    setPage(1);
+    setHasNext(false);
 
     (async () => {
       try {
         if (view === "following") {
-          const res = await fetchMyFollowing(1, 20);
-          if (!cancelled) setThreads(res.items);
+          const res = await fetchMyFollowing(1, PERSONAL_PAGE_SIZE);
+          if (!cancelled) {
+            setThreads(res.items);
+            setHasNext(res.has_next);
+          }
         } else {
-          const res = await fetchMyBookmarks(1, 20);
-          if (!cancelled) setPosts(res.items);
+          const res = await fetchMyBookmarks(1, PERSONAL_PAGE_SIZE);
+          if (!cancelled) {
+            setPosts(res.items);
+            setHasNext(res.has_next);
+          }
         }
       } catch {
         if (!cancelled) setError(true);
@@ -84,6 +97,39 @@ export default function ForumPersonalFeed({ view }: { view: PersonalView }) {
       cancelled = true;
     };
   }, [view]);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasNext) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    try {
+      if (view === "following") {
+        const res = await fetchMyFollowing(nextPage, PERSONAL_PAGE_SIZE);
+        setThreads((prev) => [...prev, ...res.items]);
+        setHasNext(res.has_next);
+      } else {
+        const res = await fetchMyBookmarks(nextPage, PERSONAL_PAGE_SIZE);
+        setPosts((prev) => [...prev, ...res.items]);
+        setHasNext(res.has_next);
+      }
+      setPage(nextPage);
+    } catch {
+      // keep what we have; the button stays for a retry
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMoreButton = hasNext ? (
+    <button
+      type="button"
+      onClick={loadMore}
+      disabled={loadingMore}
+      className="mt-3 w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#3a3028] dark:bg-transparent dark:text-stone-300 dark:hover:bg-[#241d19]"
+    >
+      {loadingMore ? "Loading..." : "Load more"}
+    </button>
+  ) : null;
 
   if (loading) {
     return (
@@ -114,42 +160,52 @@ export default function ForumPersonalFeed({ view }: { view: PersonalView }) {
     }
 
     return (
-      <ul className="space-y-3">
-        {threads.map((t) => (
-          <li key={t.id}>
-            <Link
-              to={`/forum/${t.id}`}
-              className="group block rounded-2xl border border-slate-200/80 bg-white px-4 py-3 transition hover:border-slate-300 hover:shadow-sm dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.96),_rgba(21,17,14,0.96))]"
-            >
-              <div className="flex items-center gap-2">
-                <h3 className="min-w-0 flex-1 truncate text-sm font-bold text-slate-900 transition group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-300">
-                  {t.title}
-                </h3>
-                {t.has_unread ? (
-                  <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
-                    New
-                  </span>
-                ) : null}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
-                <span>
-                  {t.post_count} {t.post_count === 1 ? "reply" : "replies"}
-                </span>
-                <span aria-hidden="true">·</span>
-                <span suppressHydrationWarning>
-                  active {timeAgo(t.last_post_at)}
-                </span>
-                {t.category_name ? (
-                  <>
+      <>
+        {/* Flat divided feed — matches the Discover thread list */}
+        <ul className="overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/70 shadow-sm backdrop-blur-sm dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(27,22,19,0.98),rgba(20,16,13,0.98))]">
+          {threads.map((t) => {
+            const replyCount = Math.max(0, (t.post_count ?? 1) - 1);
+            return (
+              <li
+                key={t.id}
+                className="border-b border-slate-100 last:border-b-0 dark:border-[#2b231d]"
+              >
+                <Link
+                  to={`/forum/${t.id}`}
+                  className="group block px-4 py-3 transition hover:bg-slate-50/80 dark:hover:bg-[#241d19]"
+                >
+                  <div className="flex items-center gap-2">
+                    <h3 className="min-w-0 flex-1 truncate text-sm font-bold text-slate-900 transition group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-300">
+                      {t.title}
+                    </h3>
+                    {t.has_unread ? (
+                      <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                        New
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    <span>
+                      {replyCount} {replyCount === 1 ? "reply" : "replies"}
+                    </span>
                     <span aria-hidden="true">·</span>
-                    <span>{t.category_name}</span>
-                  </>
-                ) : null}
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+                    <span suppressHydrationWarning>
+                      active {timeAgo(t.last_post_at)}
+                    </span>
+                    {t.category_name ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>{t.category_name}</span>
+                      </>
+                    ) : null}
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        {loadMoreButton}
+      </>
     );
   }
 
@@ -164,35 +220,42 @@ export default function ForumPersonalFeed({ view }: { view: PersonalView }) {
   }
 
   return (
-    <ul className="space-y-3">
-      {posts.map((p) => {
-        const href = p.thread_id ? `/forum/${p.thread_id}#post-${p.id}` : "/forum";
-        const hasImage = hasMarkdownImage(p.content_markdown);
-        return (
-          <li key={p.id}>
-            <Link
-              to={href}
-              className="group block rounded-2xl border border-slate-200/80 bg-white px-4 py-3 transition hover:border-slate-300 hover:shadow-sm dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.96),_rgba(21,17,14,0.96))]"
+    <>
+      {/* Flat divided feed — matches the Discover thread list */}
+      <ul className="overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white/70 shadow-sm backdrop-blur-sm dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,rgba(27,22,19,0.98),rgba(20,16,13,0.98))]">
+        {posts.map((p) => {
+          const href = p.thread_id ? `/forum/${p.thread_id}#post-${p.id}` : "/forum";
+          const hasImage = hasMarkdownImage(p.content_markdown);
+          return (
+            <li
+              key={p.id}
+              className="border-b border-slate-100 last:border-b-0 dark:border-[#2b231d]"
             >
-              <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <span className="font-medium text-slate-700 dark:text-slate-200">
-                  {p.author_username || "Anonymous"}
-                </span>
-                <span aria-hidden="true">·</span>
-                <span suppressHydrationWarning>{timeAgo(p.created_at)}</span>
-                {hasImage ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:border-sky-800/70 dark:bg-sky-950/30 dark:text-sky-300">
-                    <ImageIcon className="h-3 w-3" aria-hidden="true" />
-                    Image
+              <Link
+                to={href}
+                className="group block px-4 py-3 transition hover:bg-slate-50/80 dark:hover:bg-[#241d19]"
+              >
+                <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="font-medium text-slate-700 dark:text-slate-200">
+                    {p.author_username || "Anonymous"}
                   </span>
-                ) : null}
-              </div>
-              <BookmarkedPostPreview markdown={p.content_markdown} />
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+                  <span aria-hidden="true">·</span>
+                  <span suppressHydrationWarning>{timeAgo(p.created_at)}</span>
+                  {hasImage ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:border-sky-800/70 dark:bg-sky-950/30 dark:text-sky-300">
+                      <ImageIcon className="h-3 w-3" aria-hidden="true" />
+                      Image
+                    </span>
+                  ) : null}
+                </div>
+                <BookmarkedPostPreview markdown={p.content_markdown} />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      {loadMoreButton}
+    </>
   );
 }
 
