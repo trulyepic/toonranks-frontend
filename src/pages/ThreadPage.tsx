@@ -989,33 +989,30 @@ export default function ThreadPage() {
             </div>
           </div>
 
-          {thread?.series_refs?.length ? (
-            <div className="mt-2 flex flex-wrap gap-3">
-              {thread.series_refs.map((s) => (
-                <Link
-                  key={s.series_id}
-                  to={`/series/${s.series_id}`}
-                  className="w-16 text-center"
-                  title={s.title || `#${s.series_id}`}
-                >
-                  {s.cover_url ? (
-                    <img
-                      src={s.cover_url}
-                      alt={s.title || `Series #${s.series_id}`}
-                      className="w-16 h-24 object-cover rounded shadow"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : (
-                    <div className="w-16 h-24 rounded bg-gray-200 dark:bg-[#241d19]" />
-                  )}
-                  <div className="mt-1 truncate text-[10px] text-slate-700 dark:text-slate-300">
-                    {s.title || `#${s.series_id}`}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : null}
+          {(() => {
+            const headerRefs: ForumSeriesRef[] =
+              posts[0]?.series_refs && posts[0].series_refs.length > 0
+                ? posts[0].series_refs
+                : thread?.series_refs ?? [];
+
+            return headerRefs.length ? (
+              <div className="mt-2 space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                    Referenced series
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Quick links tied to the opening post.
+                  </p>
+                </div>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3">
+                  {headerRefs.map((s) => (
+                    <SeriesMiniCard key={s.series_id} s={s} />
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
         </header>
 
       <section className="space-y-4">
@@ -1300,30 +1297,6 @@ export default function ThreadPage() {
                 ) : null;
               })()}
 
-              {(() => {
-                const firstRefs: ForumSeriesRef[] =
-                  posts[0].series_refs && posts[0].series_refs.length > 0
-                    ? posts[0].series_refs
-                    : thread?.series_refs ?? [];
-
-                return firstRefs.length ? (
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                        Referenced series
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                        Quick links tied to the opening post.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3">
-                      {firstRefs.map((s) => (
-                        <SeriesMiniCard key={s.series_id} s={s} />
-                      ))}
-                    </div>
-                  </div>
-                ) : null;
-              })()}
             </div>
           </article>
         )}
