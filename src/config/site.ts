@@ -6,6 +6,10 @@ export const OPERATOR_NAME = "Nofara LLC";
 export const ANDROID_PACKAGE = "com.toonranks.mobile";
 export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
 
+// Official community subreddit.
+export const REDDIT_COMMUNITY = "r/ToonRanks";
+export const REDDIT_URL = "https://www.reddit.com/r/ToonRanks/";
+
 export const SUPPORT_EMAIL = "support@toonranks.com";
 export const VERIFICATION_EMAIL = "noreply@toonranks.com";
 export const PASSWORD_RESET_EMAIL = "accounts@toonranks.com";
