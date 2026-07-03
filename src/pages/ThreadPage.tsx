@@ -41,6 +41,7 @@ import { PostVoteControl, type ForumVote } from "../components/PostVoteControl";
 import UserAvatar from "../components/UserAvatar";
 import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
+import UserTags from "../components/UserTags";
 import { timeAgo, fullTimestamp } from "../util/timeAgo";
 import { getTopRankMap } from "../util/rankMap";
 import { wasEdited } from "../util/dateUtils";
@@ -701,8 +702,6 @@ export default function ThreadPage() {
   // 🔧 edit state kept in ThreadPage and passed down
   const [editPostId, setEditPostId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState<string>("");
-  const [originalReplyComposerOpen, setOriginalReplyComposerOpen] =
-    useState(false);
 
   const notice = useNotice();
   const [rankMap, setRankMap] = useState<Record<string, number>>({});
@@ -1005,6 +1004,7 @@ export default function ThreadPage() {
                               {posts[0].author_username}
                             </span>
                           </Link>
+                          <UserTags role={posts[0].author_role} />
                           <span
                             className="rounded bg-blue-100 px-1 py-px text-[10px] font-bold uppercase leading-none tracking-wide text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
                             title="Original poster"
@@ -1087,74 +1087,9 @@ export default function ThreadPage() {
                       }
                     }}
                   />
-                  {!thread?.latest_first ? (
-                    !thread?.locked || isAdmin ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOriginalReplyComposerOpen((open) => !open)
-                        }
-                        aria-expanded={originalReplyComposerOpen}
-                        className="inline-flex items-center px-1.5 py-1 text-sm font-medium text-blue-700 transition hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
-                      >
-                        Reply
-                      </button>
-                    ) : (
-                      <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200">
-                        Replies are locked.
-                      </span>
-                    )
-                  ) : null}
-                  {!thread?.latest_first &&
-                    originalReplyComposerOpen &&
-                    (!thread?.locked || isAdmin) && (
-                      <div className="mt-2 w-full basis-full">
-                        <RichReplyEditor
-                          compact
-                          threadId={threadId}
-                          onCancel={() => setOriginalReplyComposerOpen(false)}
-                          onSubmit={async (content, seriesIds) => {
-                            if (!user) {
-                              notice.show({
-                                message:
-                                  "You need to be logged in to post a reply.",
-                                title: "Sign in required",
-                                variant: "warning",
-                              });
-                              return;
-                            }
-
-                            const trimmed = content.trim();
-                            if (!trimmed) {
-                              notice.show({
-                                message: "Reply cannot be empty.",
-                                title: "Cannot post",
-                                variant: "warning",
-                              });
-                              return;
-                            }
-
-                            try {
-                              const p = await createForumPost(threadId, {
-                                content_markdown: trimmed,
-                                series_ids: seriesIds,
-                                parent_id: posts[0].id,
-                              });
-                              setPosts((prev) => [...prev, p]);
-                              setOriginalReplyComposerOpen(false);
-                            } catch (err: unknown) {
-                              notice.show({
-                                message:
-                                  getErrorMessage(err) ||
-                                  "Failed to post reply.",
-                                title: "Post failed",
-                                variant: "error",
-                              });
-                            }
-                          }}
-                        />
-                      </div>
-                    )}
+                  {/* The OP's own Reply control was removed as redundant — the
+                      main composer sits directly below this post and opening a
+                      second editor stacked on it read as a bug. */}
                 </div>
 
                 {/* Reply composer — directly under the original post (Reddit-style),
@@ -1800,6 +1735,7 @@ function ReplyBranch({
                       {post.author_username}
                     </span>
                   </Link>
+                  <UserTags role={post.author_role} />
                   {isOp && (
                     <span
                       className="rounded bg-blue-100 px-1 py-px text-[10px] font-bold uppercase leading-none tracking-wide text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"

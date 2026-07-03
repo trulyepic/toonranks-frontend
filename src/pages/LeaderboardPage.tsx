@@ -6,6 +6,7 @@ import {
   type LeaderboardPageOut,
 } from "../api/manApi";
 import UserAvatar from "../components/UserAvatar";
+import UserTags from "../components/UserTags";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { SITE_NAME } from "../config/site";
 
@@ -91,6 +92,12 @@ function RankerSpotlightCard({
         >
           {user.username}
         </p>
+        <UserTags
+          role={user.role}
+          seriesRated={user.series_rated}
+          postCount={user.post_count}
+          className="mt-1 justify-center"
+        />
         <p className={`mt-1 text-lg font-black sm:text-xl ${cpCls}`}>
           ◆ {formatCP(user.cred_score)}{" "}
           <span className="text-xs font-semibold opacity-75">CP</span>
@@ -133,6 +140,12 @@ function RankerRow({ user }: { user: LeaderboardUser }) {
         className={`min-w-0 flex-1 truncate text-sm font-semibold ${inlineUsernameClassName(user.role)}`}
       >
         {user.username}
+        <UserTags
+          role={user.role}
+          seriesRated={user.series_rated}
+          postCount={user.post_count}
+          className="ml-1.5"
+        />
       </span>
 
       {/* Cred Points */}

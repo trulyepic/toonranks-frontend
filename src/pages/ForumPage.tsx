@@ -36,6 +36,7 @@ import { NoticeModal } from "../components/NoticeModal";
 import UserAvatar from "../components/UserAvatar";
 import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
+import UserTags from "../components/UserTags";
 import { getTopRankMap } from "../util/rankMap";
 import { timeAgo, fullTimestamp } from "../util/timeAgo";
 import RichTextComposer, {
@@ -660,6 +661,7 @@ export default function ForumPage() {
                             {t.author_username}
                           </span>
                         </Link>
+                        <UserTags role={t.author_role} />
                         <RankerBadge rank={rankMap[t.author_username]} />
                       </>
                     ) : (
