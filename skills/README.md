@@ -16,6 +16,7 @@ reference other skills by path — follow those too as needed.
 |---|---|---|
 | **write-article** | Write & publish a high-quality, original article for the Toon Ranks `/articles` section (manga/manhwa/manhua). Enforces the house style, adds it to the code, verifies the build. | [`skills/write-article/SKILL.md`](./write-article/SKILL.md) |
 | **generate-article-image** | Create (or source) an original, royalty-free, on-brand hero/inline image for an article, license-clear for commercial use. Used by `write-article` or standalone. | [`skills/generate-article-image/SKILL.md`](./generate-article-image/SKILL.md) |
+| **reddit-monthly-rankings** | Produce the monthly Reddit ranking-post kit: dated Top-10 graphics (manhwa/manga/manhua/all) from live data, plus copy-paste titles, bodies, flair/tag settings, and a posting checklist for r/ToonRanks and the rotating big sub. | [`skills/reddit-monthly-rankings/SKILL.md`](./reddit-monthly-rankings/SKILL.md) |
 
 ## Convention
 
