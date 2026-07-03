@@ -25,6 +25,16 @@ h3 {
   @apply font-display tracking-tight;
 }
 
+/* TipTap placeholder (forum rich-text editor) — the Placeholder extension only
+   sets data-placeholder; this rule makes it visible on the empty first line. */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  @apply text-slate-400 dark:text-slate-500;
+}
+
 @layer components {
   .dark-theme-shell {
     @apply dark:bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.12),_transparent_22%),radial-gradient(circle_at_bottom_right,_rgba(245,158,11,0.06),_transparent_24%),linear-gradient(145deg,_rgba(30,23,19,0.98),_rgba(23,18,15,0.97))] dark:border-[#322922] dark:shadow-[0_24px_60px_-42px_rgba(0,0,0,0.88)];
