@@ -198,6 +198,9 @@ follow it. Notably:
   (`skills/write-article/`).
 - **generate-article-image** — make/source an original, royalty-free, on-brand
   article image (`skills/generate-article-image/`).
+- **reddit-monthly-rankings** — produce the monthly Reddit ranking-post kit:
+  dated Top-10 graphics from live data + copy-paste post kit with flair/tag
+  settings (`skills/reddit-monthly-rankings/`).
 
 ---
 
