@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import MarkdownToolbar from "./MarkdownToolbar";
+import { ImagePlus, ListPlus } from "lucide-react";
+import RichTextComposer, {
+  type RichTextComposerHandle,
+} from "./RichTextComposer";
 import type { ForumSeriesRef, ReadingList, UserSearchResult } from "../api/manApi";
 import {
   forumSeriesSearch,
@@ -32,9 +35,26 @@ export default function RichReplyEditor({
   const { user } = useUser();
 
   const [value, setValue] = useState(initial);
-  // Formatting tools (toolbar + image/GIF + list + hint) are hidden by default
-  // for a simpler, Reddit-style box; the user reveals them on demand.
-  const [showTools, setShowTools] = useState(false);
+  // Reddit-style editor: rich text (WYSIWYG) by default, with a raw-markdown
+  // fallback. The choice is remembered across sessions.
+  const [editorMode, setEditorMode] = useState<"rich" | "markdown">(() => {
+    if (typeof window === "undefined") return "rich";
+    return localStorage.getItem("forum_editor_mode") === "markdown"
+      ? "markdown"
+      : "rich";
+  });
+  // Formatting toolbar is hidden by default (minimal Reddit-style box);
+  // revealed via the Aa button in the footer.
+  const [showToolbar, setShowToolbar] = useState(false);
+  // Remount the rich composer (re-reading `value`) each time we switch back.
+  const [composerKey, setComposerKey] = useState(0);
+  const composerRef = useRef<RichTextComposerHandle | null>(null);
+
+  const switchMode = (mode: "rich" | "markdown") => {
+    if (mode === "rich") setComposerKey((k) => k + 1);
+    setEditorMode(mode);
+    localStorage.setItem("forum_editor_mode", mode);
+  };
   const [results, setResults] = useState<ForumSeriesRef[]>([]);
   const [userResults, setUserResults] = useState<UserSearchResult[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -60,11 +80,15 @@ export default function RichReplyEditor({
   const draftKey = mode === "reply" ? `forum_draft_thread_${threadId}` : null;
   const [draftSaved, setDraftSaved] = useState(false);
 
-  // Restore draft on first mount (reply mode only)
+  // Restore draft on first mount (reply mode only). Remount the rich composer
+  // so it picks up the restored markdown.
   useEffect(() => {
     if (!draftKey) return;
     const saved = localStorage.getItem(draftKey);
-    if (saved) setValue(saved);
+    if (saved) {
+      setValue(saved);
+      setComposerKey((k) => k + 1);
+    }
   }, [draftKey]);
 
   // Save draft on change (debounced 1 s)
@@ -83,16 +107,16 @@ export default function RichReplyEditor({
   }, [value, draftKey]);
 
   const toolbarButtonClass =
-    "rounded border border-slate-200 px-2 py-1 text-slate-700 hover:bg-gray-50 dark:border-[#3a3028] dark:text-slate-200 dark:hover:bg-[#241d19]";
+    "rounded p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-100";
+  // Borderless: the textarea sits inside the shared editor box.
   const textareaClassName = compact
-    ? "h-24 w-full rounded-2xl border border-slate-200/80 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]"
-    : "h-28 w-full rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-[#5a4a3f] dark:focus:ring-[#2c241d]";
-  const primaryButtonClassName = compact
-    ? "rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]"
-    : "rounded bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]";
-  const secondaryButtonClassName = compact
-    ? "rounded border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]"
-    : "rounded border border-slate-200 bg-white px-3 py-1.5 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]";
+    ? "h-14 min-h-[3.5rem] w-full resize-y bg-transparent px-3 py-2.5 font-mono text-sm text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+    : "h-16 min-h-[4rem] w-full resize-y bg-transparent px-4 py-3 font-mono text-sm text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500";
+  // Small footer pills so the actions sit quietly inside the box (Reddit-style).
+  const primaryButtonClassName =
+    "rounded-full bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50 dark:bg-[linear-gradient(145deg,_rgba(51,93,195,0.96),_rgba(34,73,170,0.96))] dark:hover:bg-[linear-gradient(145deg,_rgba(69,109,209,0.96),_rgba(48,86,184,0.96))]";
+  const secondaryButtonClassName =
+    "rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(25,21,18,0.96),_rgba(20,17,14,0.96))] dark:text-slate-200 dark:hover:bg-[#241d19]";
 
   const insertAtCaret = (text: string) => {
     const el = taRef.current;
@@ -373,7 +397,8 @@ export default function RichReplyEditor({
         f,
         editingPostId ?? undefined
       );
-      insertAtCaret(`![](${url})`);
+      if (editorMode === "rich") composerRef.current?.insertImage(url);
+      else insertAtCaret(`![](${url})`);
     } catch (err: unknown) {
       notice.show({
         message: getErrorMessage(err, "Upload failed."),
@@ -386,70 +411,164 @@ export default function RichReplyEditor({
     }
   }
 
+  async function handleListButton() {
+    if (!user) {
+      alert("Log in to share a list.");
+      return;
+    }
+    setListMenuOpen((o) => !o);
+    if (!lists.length) {
+      try {
+        setListsLoading(true);
+        const data = await getMyReadingLists();
+        setLists(data);
+      } finally {
+        setListsLoading(false);
+      }
+    }
+  }
+
   return (
     <div className="relative">
-      {showTools && (
-      <div className="relative mb-2">
-        <MarkdownToolbar
-          textareaRef={taRef}
-          value={value}
-          onChange={setValue}
-        />
-      </div>
-      )}
-
-      {showTools && (
-      <div className="relative mb-2 flex items-center gap-2 text-sm">
-        <button
-          type="button"
-          className={toolbarButtonClass}
-          onClick={() => fileRef.current?.click()}
-          title="Add image or GIF"
-        >
-          + Image/GIF
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
-          className="hidden"
-          onChange={handlePickFile}
-        />
-        {uploading && (
-          <span className="text-xs text-gray-500 dark:text-slate-400">
-            Uploading...
-          </span>
+      {/* Reddit-style unified editor box */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white transition focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:focus-within:border-[#5a4a3f] dark:focus-within:ring-[#2c241d]">
+        {editorMode === "rich" ? (
+          <RichTextComposer
+            key={composerKey}
+            ref={composerRef}
+            initialMarkdown={value}
+            onChangeMarkdown={setValue}
+            compact={compact}
+            showToolbar={showToolbar}
+            placeholder={
+              mode === "edit"
+                ? "Edit your content..."
+                : "Join the conversation"
+            }
+            onSwitchToMarkdown={() => switchMode("markdown")}
+          />
+        ) : (
+          <>
+            <div className="flex items-center justify-between px-3 py-1.5">
+              <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                Markdown Editor
+              </span>
+              <button
+                type="button"
+                onClick={() => switchMode("rich")}
+                className="text-xs font-semibold text-slate-600 hover:underline dark:text-slate-300"
+              >
+                Switch to Rich Text Editor
+              </button>
+            </div>
+            <textarea
+              ref={taRef}
+              value={value}
+              onChange={onChange}
+              onKeyDown={onKeyDown}
+              placeholder={
+                mode === "edit"
+                  ? "Edit your content..."
+                  : "Join the conversation"
+              }
+              className={textareaClassName}
+            />
+          </>
         )}
 
-        <button
-          type="button"
-          className={toolbarButtonClass}
-          title="Insert a link to one of your reading lists"
-          onClick={async () => {
-            if (!user) {
-              alert("Log in to share a list.");
-              return;
-            }
-            setListMenuOpen((o) => !o);
-            if (!lists.length) {
-              try {
-                setListsLoading(true);
-                const data = await getMyReadingLists();
-                setLists(data);
-              } finally {
-                setListsLoading(false);
-              }
-            }
-          }}
-        >
-          List
-        </button>
+        {/* footer inside the box: media tools left, actions right */}
+        <div className="relative flex flex-wrap items-center justify-between gap-2 px-3 pb-2.5 pt-1">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              onClick={() => fileRef.current?.click()}
+              title="Add image or GIF"
+              aria-label="Add image or GIF"
+            >
+              <ImagePlus size={16} />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handlePickFile}
+            />
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              title="Insert a link to one of your reading lists"
+              aria-label="Insert a link to one of your reading lists"
+              onClick={handleListButton}
+            >
+              <ListPlus size={16} />
+            </button>
+            {editorMode === "rich" && (
+              <button
+                type="button"
+                onClick={() => setShowToolbar((s) => !s)}
+                aria-expanded={showToolbar}
+                title={
+                  showToolbar ? "Hide formatting tools" : "Show formatting tools"
+                }
+                aria-label={
+                  showToolbar ? "Hide formatting tools" : "Show formatting tools"
+                }
+                className={
+                  showToolbar
+                    ? "rounded-full bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-900 dark:bg-[#2c241d] dark:text-slate-50"
+                    : "rounded-full px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-100"
+                }
+              >
+                Aa
+              </button>
+            )}
+            {uploading && (
+              <span className="text-xs text-gray-500 dark:text-slate-400">
+                Uploading...
+              </span>
+            )}
+            {draftSaved && (
+              <span className="text-[11px] italic text-slate-400 dark:text-slate-500">
+                Draft saved
+              </span>
+            )}
+            <span
+              className={`ml-1 text-xs ${
+                value.length > MAX_POST_LENGTH
+                  ? "font-medium text-red-500"
+                  : "text-slate-400 dark:text-slate-500"
+              }`}
+            >
+              {value.length.toLocaleString()} /{" "}
+              {MAX_POST_LENGTH.toLocaleString()}
+            </span>
+          </div>
 
+          <div className="flex items-center gap-2">
+            {(mode === "edit" || onCancel) && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className={secondaryButtonClassName}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={handlePrimary}
+              disabled={value.length > MAX_POST_LENGTH}
+              className={primaryButtonClassName}
+            >
+              {mode === "edit" ? "Save" : "Reply"}
+            </button>
+          </div>
         {listMenuOpen && (
           <div
             ref={listMenuRef}
             onMouseDown={(e) => e.stopPropagation()}
-            className="absolute left-0 top-8 z-50 w-80 rounded border border-slate-200 bg-white shadow dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.98),_rgba(21,17,14,0.98))]"
+            className="absolute bottom-full left-2 z-50 mb-1 w-80 rounded border border-slate-200 bg-white shadow dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.98),_rgba(21,17,14,0.98))]"
           >
             {listsLoading ? (
               <div className="px-3 py-2 text-sm text-gray-500 dark:text-slate-400">
@@ -482,7 +601,13 @@ export default function RichReplyEditor({
                           );
                           return;
                         }
-                        insertAtCaret(`[${l.name}](/lists/${l.share_token})`);
+                        if (editorMode === "rich")
+                          composerRef.current?.insertLink(
+                            l.name,
+                            `/lists/${l.share_token}`
+                          );
+                        else
+                          insertAtCaret(`[${l.name}](/lists/${l.share_token})`);
                         setListMenuOpen(false);
                       }}
                       className={
@@ -510,50 +635,7 @@ export default function RichReplyEditor({
           </div>
         )}
 
-        <span className="ml-2 text-xs text-gray-500 dark:text-slate-400">
-          Markdown · <span className="font-semibold">@</span> to mention a series or user · images up to 300 KB, GIFs up to 1 MB
-        </span>
-      </div>
-      )}
-
-      <textarea
-        ref={taRef}
-        value={value}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        placeholder={
-          mode === "edit"
-            ? "Edit your content..."
-            : "Write a reply... (type @ to mention a series or user)"
-        }
-        className={textareaClassName}
-      />
-      <div className="flex items-center justify-between mt-1">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowTools((s) => !s)}
-            aria-expanded={showTools}
-            className="rounded px-1.5 py-0.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-200"
-            title={showTools ? "Hide formatting tools" : "Show formatting tools"}
-          >
-            {showTools ? "Hide formatting" : "Aa  Formatting"}
-          </button>
-          {draftSaved && (
-            <span className="text-[11px] italic text-slate-400 dark:text-slate-500">
-              Draft saved
-            </span>
-          )}
         </div>
-        <span
-          className={`text-xs ${
-            value.length > MAX_POST_LENGTH
-              ? "text-red-500 font-medium"
-              : "text-slate-400 dark:text-slate-500"
-          }`}
-        >
-          {value.length.toLocaleString()} / {MAX_POST_LENGTH.toLocaleString()}
-        </span>
       </div>
 
       {menuOpen && (results.length > 0 || userResults.length > 0) && (
@@ -660,45 +742,6 @@ export default function RichReplyEditor({
           ))}
         </div>
       )}
-
-      <div className="mt-3 flex justify-end gap-2">
-        {mode === "edit" ? (
-          <>
-            <button
-              onClick={onCancel}
-              className={secondaryButtonClassName}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handlePrimary}
-              disabled={value.length > MAX_POST_LENGTH}
-              className={primaryButtonClassName}
-            >
-              Save
-            </button>
-          </>
-        ) : (
-          <>
-            {onCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className={secondaryButtonClassName}
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              onClick={handlePrimary}
-              disabled={value.length > MAX_POST_LENGTH}
-              className={primaryButtonClassName}
-            >
-              Reply
-            </button>
-          </>
-        )}
-      </div>
 
       <NoticeModal
         open={notice.open}

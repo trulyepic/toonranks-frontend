@@ -38,7 +38,9 @@ import { RankerBadge } from "../components/RankerBadge";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { getTopRankMap } from "../util/rankMap";
 import { timeAgo, fullTimestamp } from "../util/timeAgo";
-import MarkdownToolbar from "../components/MarkdownToolbar";
+import RichTextComposer, {
+  type RichTextComposerHandle,
+} from "../components/RichTextComposer";
 import ForumPersonalFeed from "../components/ForumPersonalFeed";
 
 type ForumView = "discover" | "following" | "saved";
@@ -1391,6 +1393,23 @@ function NewThreadModal({
     return initialMd;
   });
 
+  // Reddit-style editor mode (shared preference with the reply box)
+  const [editorMode, setEditorMode] = useState<"rich" | "markdown">(() => {
+    if (typeof window === "undefined") return "rich";
+    return localStorage.getItem("forum_editor_mode") === "markdown"
+      ? "markdown"
+      : "rich";
+  });
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [composerKey, setComposerKey] = useState(0);
+  const composerRef = useRef<RichTextComposerHandle | null>(null);
+
+  const switchEditorMode = (m: "rich" | "markdown") => {
+    if (m === "rich") setComposerKey((k) => k + 1);
+    setEditorMode(m);
+    localStorage.setItem("forum_editor_mode", m);
+  };
+
   // Save draft (debounced 1 s) — create mode only
   useEffect(() => {
     if (mode !== "create") return;
@@ -1715,7 +1734,17 @@ function NewThreadModal({
   };
 
   useEffect(() => setTitle(initialTitle), [initialTitle]);
-  useEffect(() => setMd(initialMd), [initialMd]);
+  const mdInitRef = useRef(true);
+  useEffect(() => {
+    // Skip the mount run so a restored draft isn't clobbered by initialMd.
+    if (mdInitRef.current) {
+      mdInitRef.current = false;
+      return;
+    }
+    setMd(initialMd);
+    // Remount the rich composer so it picks up the new content.
+    setComposerKey((k) => k + 1);
+  }, [initialMd]);
 
   const headerText = mode === "edit" ? "Update Thread" : "New Thread";
   const primaryText = mode === "edit" ? "Save" : "Create";
@@ -1776,23 +1805,68 @@ function NewThreadModal({
           className="mb-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 dark:border-[#3a3028] dark:bg-[#18120f] dark:text-stone-100 dark:placeholder:text-stone-500"
         />
 
-        {/* body with @-mention support */}
-        <div className="mb-1">
-          <MarkdownToolbar
-            textareaRef={mdRef}
-            value={md}
-            onChange={setMd}
-          />
-        </div>
-        <div className="relative">
-          <textarea
-            ref={mdRef}
-            value={md}
-            onChange={onMdChange}
-            onKeyDown={onMdKeyDown}
-            placeholder="Say something (Markdown supported)... Tip: type @ to mention a series"
-            className="h-36 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 dark:border-[#3a3028] dark:bg-[#18120f] dark:text-stone-100 dark:placeholder:text-stone-500 sm:h-40"
-          />
+        {/* body with @-mention support — Reddit-style unified editor box */}
+        <div className="relative rounded-2xl border border-slate-200/80 bg-white transition focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-100 dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(22,18,15,0.98),_rgba(18,15,12,0.98))] dark:focus-within:border-[#5a4a3f] dark:focus-within:ring-[#2c241d]">
+          {editorMode === "rich" ? (
+            <RichTextComposer
+              key={composerKey}
+              ref={composerRef}
+              initialMarkdown={md}
+              onChangeMarkdown={(v) => {
+                setMd(v);
+                setMdMentionCount(new Set(extractIds(v)).size);
+              }}
+              showToolbar={showToolbar}
+              placeholder="Say something... Tip: type @ to mention a series"
+              onSwitchToMarkdown={() => switchEditorMode("markdown")}
+            />
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-3 py-1.5">
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                  Markdown Editor
+                </span>
+                <button
+                  type="button"
+                  onClick={() => switchEditorMode("rich")}
+                  className="text-xs font-semibold text-slate-600 hover:underline dark:text-slate-300"
+                >
+                  Switch to Rich Text Editor
+                </button>
+              </div>
+              <textarea
+                ref={mdRef}
+                value={md}
+                onChange={onMdChange}
+                onKeyDown={onMdKeyDown}
+                placeholder="Say something... Tip: type @ to mention a series"
+                className="h-24 min-h-[4rem] w-full resize-y bg-transparent px-3 py-2.5 font-mono text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-stone-100 dark:placeholder:text-stone-500"
+              />
+            </>
+          )}
+
+          {editorMode === "rich" && (
+            <div className="flex items-center px-3 pb-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowToolbar((s) => !s)}
+                aria-expanded={showToolbar}
+                title={
+                  showToolbar ? "Hide formatting tools" : "Show formatting tools"
+                }
+                aria-label={
+                  showToolbar ? "Hide formatting tools" : "Show formatting tools"
+                }
+                className={
+                  showToolbar
+                    ? "rounded-full bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-900 dark:bg-[#2c241d] dark:text-slate-50"
+                    : "rounded-full px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-[#241d19] dark:hover:text-slate-100"
+                }
+              >
+                Aa
+              </button>
+            </div>
+          )}
 
           {mdMenuOpen && mdResults.length > 0 && (
             <div
