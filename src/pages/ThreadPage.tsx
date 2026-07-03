@@ -718,7 +718,7 @@ export default function ThreadPage() {
       .split("\n")
       .map((line) => `> ${line}`)
       .join("\n");
-    const attribution = `> **@${post.author_username ?? "?"}** wrote:\n${quoted}\n\n`;
+    const attribution = `> **${post.author_username ? `@${post.author_username}` : "Anonymous"}** wrote:\n${quoted}\n\n`;
     setQuoteInitial(attribution);
     setQuoteParentId(post.id);
     setQuoteKey((k) => k + 1);
@@ -1160,9 +1160,12 @@ export default function ThreadPage() {
                 {/* Reply composer — directly under the original post (Reddit-style),
                     inviting replies and separating the OP from the comments below. */}
                 <div ref={bottomEditorRef} className="space-y-2">
-                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                    {thread?.latest_first ? "Add an update" : "Join the conversation"}
-                  </h3>
+                  {/* "Join the conversation" now lives in the editor placeholder */}
+                  {thread?.latest_first && (
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      Add an update
+                    </h3>
+                  )}
                     {!thread?.locked || isAdmin ? (
                       <RichReplyEditor
                         key={quoteKey}
