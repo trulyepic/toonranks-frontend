@@ -198,18 +198,23 @@ const RichTextComposer = forwardRef<
 
   async function runSearch(q: string) {
     const seq = ++searchSeq.current;
-    try {
-      const [series, users] = await Promise.all([
-        forumSeriesSearch(q),
-        searchUsers(q, 5),
-      ]);
-      if (seq !== searchSeq.current) return; // stale response
-      setSeriesResults(series);
-      setUserResults(users);
-      setHighlight(0);
-    } catch {
-      if (seq === searchSeq.current) closeMenu();
+    // allSettled so one failing endpoint doesn't blank the other's results —
+    // Promise.all here made a single failure silently kill the whole menu.
+    const [series, users] = await Promise.allSettled([
+      forumSeriesSearch(q),
+      searchUsers(q, 5),
+    ]);
+    if (seq !== searchSeq.current) return; // stale response
+    const seriesOk = series.status === "fulfilled" ? series.value : [];
+    const usersOk = users.status === "fulfilled" ? users.value : [];
+    if (series.status === "rejected" && users.status === "rejected") {
+      console.warn("[mentions] both search endpoints failed", series.reason);
+      closeMenu();
+      return;
     }
+    setSeriesResults(seriesOk);
+    setUserResults(usersOk);
+    setHighlight(0);
   }
 
   function pickSeries(r: ForumSeriesRef) {

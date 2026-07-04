@@ -183,20 +183,21 @@ export default function RichReplyEditor({
   }
 
   async function runMentionSearch(q: string) {
-    try {
-      const [seriesResults, users] = await Promise.all([
-        forumSeriesSearch(q),
-        searchUsers(q, 5),
-      ]);
-      setResults(seriesResults);
-      setUserResults(users);
-      setHighlight(0);
-      setMenuOpen(seriesResults.length > 0 || users.length > 0);
-    } catch {
-      setResults([]);
-      setUserResults([]);
-      setMenuOpen(false);
+    // allSettled so one failing endpoint doesn't blank the other's results —
+    // Promise.all here made a single failure silently kill the whole menu.
+    const [series, users] = await Promise.allSettled([
+      forumSeriesSearch(q),
+      searchUsers(q, 5),
+    ]);
+    const seriesOk = series.status === "fulfilled" ? series.value : [];
+    const usersOk = users.status === "fulfilled" ? users.value : [];
+    if (series.status === "rejected" && users.status === "rejected") {
+      console.warn("[mentions] both search endpoints failed", series.reason);
     }
+    setResults(seriesOk);
+    setUserResults(usersOk);
+    setHighlight(0);
+    setMenuOpen(seriesOk.length > 0 || usersOk.length > 0);
   }
 
   function insertUserMention(
