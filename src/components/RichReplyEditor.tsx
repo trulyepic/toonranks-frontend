@@ -164,21 +164,22 @@ export default function RichReplyEditor({
   function detectAtToken(nextValue: string, caret: number) {
     if (caret < 0 || caret > nextValue.length) return null;
     const before = nextValue.slice(0, caret);
-    const lastBoundary = Math.max(
-      before.lastIndexOf(" "),
-      before.lastIndexOf("\n"),
-      before.lastIndexOf("\t"),
-      before.lastIndexOf("("),
-      before.lastIndexOf("[")
-    );
-    const tokenStart = lastBoundary + 1;
-    const token = nextValue.slice(tokenStart, caret);
-    if (!token.startsWith("@")) return null;
+    // Anchor to the LAST "@" before the caret so the query may contain spaces
+    // (multi-word titles like "@The Legend of…"). Same limits as the rich
+    // editor: no newline, must not start with whitespace, capped at 60 chars.
+    // Over-matching after prose self-limits — empty results close the menu.
+    const tokenStart = before.lastIndexOf("@");
+    if (tokenStart === -1) return null;
+    const prev = tokenStart === 0 ? "" : before[tokenStart - 1];
+    if (prev && !/[\s([]/.test(prev)) return null;
+    const query = before.slice(tokenStart + 1, caret);
+    if (query.length > 60 || query.includes("\n") || /^\s/.test(query))
+      return null;
+    // Extend past the caret to the end of the current word so picking a result
+    // mid-word replaces the whole word.
     const after = nextValue.slice(caret);
     const m = after.match(/^[^\s.,!?)]*/);
     const tokenEnd = caret + (m ? m[0].length : 0);
-    const wholeToken = nextValue.slice(tokenStart, tokenEnd);
-    const query = wholeToken.slice(1);
     return { tokenStart, tokenEnd, query };
   }
 
