@@ -111,14 +111,22 @@ export type RichTextComposerHandle = {
 
 type MentionHit = { from: number; to: number; query: string };
 
-/** Find an "@query" token immediately before the caret in the current text block. */
+/**
+ * Find an "@query" token immediately before the caret in the current text block.
+ *
+ * The query may contain spaces so multi-word titles ("@The Legend of the…")
+ * keep matching — it just can't contain another "@" (which anchors the match to
+ * the LAST "@" before the caret), can't start with whitespace, and is capped at
+ * 60 chars. Over-matching after ordinary prose ("@user thanks for the rec") is
+ * self-limiting: once the search returns nothing, the menu closes.
+ */
 function detectMention(editor: Editor): MentionHit | null {
   const { $from, empty } = editor.state.selection;
   if (!empty) return null;
   const textBefore = $from.parent.textBetween(0, $from.parentOffset, "￼");
-  const m = textBefore.match(/(^|[\s([])@([^\s@]*)$/);
+  const m = textBefore.match(/(^|[\s([])@([^\s@][^@]{0,59})?$/);
   if (!m) return null;
-  const query = m[2];
+  const query = m[2] ?? "";
   const tokenLen = query.length + 1; // include "@"
   const from = $from.pos - tokenLen;
   return { from, to: $from.pos, query };
