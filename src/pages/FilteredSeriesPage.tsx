@@ -17,6 +17,7 @@ import EditSeriesModal from "../components/EditSeriesModal";
 import RankingsToolbar, { type SortValue } from "../components/RankingsToolbar";
 import InfiniteScroll from "react-infinite-scroll-component";
 import ManCard from "../components/ManCard";
+import HomeTopTen from "../components/HomeTopTen";
 import ReadingListModal from "../components/ReadingListModal";
 import ShimmerLoader from "../components/ShimmerLoader";
 import { useSearch } from "../components/useSearch";
@@ -235,7 +236,11 @@ const FilteredSeriesPage = () => {
     const controller = new AbortController();
     controllerRef.current = controller;
 
-    setItems([]);
+    // Reset pagination, but DON'T blank the grid here. Clearing items before the
+    // new data arrives collapses the page to near-zero height for a moment — the
+    // scrollbar disappears then reappears as it refills (the "scrollbar loads" /
+    // empty-flash on type navigation). Instead we keep the current cards visible
+    // and swap them out atomically once the new page-1 resolves below.
     setPage(1);
     setHasMore(true);
 
@@ -260,7 +265,7 @@ const FilteredSeriesPage = () => {
             signal: controller.signal,
           });
           setItems(all);
-          if (all.length < PAGE_SIZE) setHasMore(false);
+          setHasMore(all.length >= PAGE_SIZE);
         }
       } catch (err: unknown) {
         if (!isRequestCanceled(err)) {
@@ -276,9 +281,17 @@ const FilteredSeriesPage = () => {
     return () => controller.abort();
   }, [seriesType, searchTerm, activeGenre, activeStatus, sortBy]);
 
+  // Pagination: load the next page only when `page` actually increments. We
+  // read loadSeries through a ref so this effect does NOT re-fire merely
+  // because loadSeries's identity changed (e.g. a filter change), which would
+  // otherwise fetch a stale page number mid-reset.
+  const loadSeriesRef = useRef(loadSeries);
   useEffect(() => {
-    if (!searchTerm.trim() && page > 1) loadSeries(page);
-  }, [loadSeries, page, searchTerm]);
+    loadSeriesRef.current = loadSeries;
+  }, [loadSeries]);
+  useEffect(() => {
+    if (!searchTerm.trim() && page > 1) loadSeriesRef.current(page);
+  }, [page, searchTerm]);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this series?")) return;
@@ -293,6 +306,14 @@ const FilteredSeriesPage = () => {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
+      {/* Top 10 showcase for this type — from the SSR-seeded page 1. */}
+      {!searchTerm.trim() && (
+        <HomeTopTen
+          items={initialItems}
+          title={`Top 10 ${seriesType?.toUpperCase() ?? ""}`.trim()}
+        />
+      )}
+
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">
         <RankingsToolbar
           contextLabel={seriesType?.toUpperCase() ?? "Rankings"}
@@ -323,6 +344,8 @@ const FilteredSeriesPage = () => {
           <CompareManager>
             {({ toggleCompare, isSelectedForCompare }) => (
               <InfiniteScroll
+                className="no-scrollbar"
+                style={{ overflow: "visible" }}
                 dataLength={items.length}
                 next={() => setPage((prev) => prev + 1)}
                 hasMore={!searchTerm.trim() && hasMore}
@@ -366,9 +389,10 @@ const FilteredSeriesPage = () => {
 
                 {items.length > 0 ? (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                    {items.map((item) => (
+                    {items.map((item, i) => (
                       <ManCard
                         key={item.id}
+                        index={i < PAGE_SIZE ? i : undefined}
                         id={item.id}
                         rank={item.rank ?? "-"}
                         title={item.title}

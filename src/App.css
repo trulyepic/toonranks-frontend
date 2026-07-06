@@ -1,6 +1,7 @@
-/* Prevent layout shift caused by scrollbar */
+/* Reserve scrollbar space without forcing a visible page scrollbar. */
 html {
-  overflow-y: scroll;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 /* #root {
