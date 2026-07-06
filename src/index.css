@@ -13,6 +13,11 @@ body,
   min-height: 100%;
 }
 
+html {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
 body {
   @apply bg-slate-50 font-sans text-slate-900 antialiased transition-colors dark:bg-[#15110f] dark:text-[#f4efe8];
 }
@@ -23,6 +28,107 @@ h1,
 h2,
 h3 {
   @apply font-display tracking-tight;
+}
+
+/* ── Home motion (CSS-only, SSR/SEO/CWV-safe) ────────────────────────────────
+   All entrance/ambient animation lives behind prefers-reduced-motion and only
+   animates opacity/transform (never layout), so there's no CLS and content is
+   fully visible without JS. */
+
+@keyframes tr-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Shimmer sweep for skeleton placeholders (ShimmerBox/ShimmerLoader). The
+   `animate-shimmer` class was referenced app-wide but never defined, so
+   skeletons sat static — this makes them actually shimmer. */
+@keyframes tr-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.animate-shimmer {
+  background-size: 200% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .animate-shimmer {
+    animation: tr-shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes tr-aurora-drift {
+  0% {
+    transform: translate3d(-6%, -4%, 0) scale(1.05);
+  }
+  50% {
+    transform: translate3d(6%, 4%, 0) scale(1.15);
+  }
+  100% {
+    transform: translate3d(-6%, -4%, 0) scale(1.05);
+  }
+}
+
+@keyframes tr-crown-bob {
+  0%,
+  100% {
+    transform: rotate(-12deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-12deg) translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Staggered card entrance; delay set inline per card via --tr-delay. */
+  .tr-card-enter {
+    animation: tr-card-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: var(--tr-delay, 0ms);
+  }
+
+  /* Slow-drifting aurora behind the hero headline. */
+  .tr-aurora::before {
+    animation: tr-aurora-drift 18s ease-in-out infinite;
+  }
+
+  .tr-crown {
+    animation: tr-crown-bob 2.4s ease-in-out infinite;
+  }
+}
+
+/* The aurora blob itself (visible regardless of motion; only its drift is gated). */
+.tr-aurora {
+  position: relative;
+  isolation: isolate;
+}
+.tr-aurora::before {
+  content: "";
+  position: absolute;
+  inset: -40% -20% auto -20%;
+  height: 150%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 9999px;
+  background:
+    radial-gradient(closest-side, rgba(59, 130, 246, 0.16), transparent 70%),
+    radial-gradient(closest-side, rgba(45, 212, 191, 0.14), transparent 70%);
+  background-position:
+    20% 30%,
+    80% 20%;
+  background-size:
+    55% 65%,
+    50% 60%;
+  background-repeat: no-repeat;
+  filter: blur(6px);
 }
 
 /* TipTap placeholder (forum rich-text editor) — the Placeholder extension only

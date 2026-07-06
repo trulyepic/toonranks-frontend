@@ -25,7 +25,23 @@ type Props = {
   onAddToReadingList?: () => void;
   isInReadingList?: boolean;
   status?: "ONGOING" | "COMPLETE" | "HIATUS" | "UNKNOWN" | "SEASON_END" | null;
+  /** Position in the grid — drives the staggered entrance delay. */
+  index?: number;
 };
+
+// Gold / silver / bronze rank-badge treatment for the podium (matches mobile).
+function rankBadgeClasses(rank: number | string) {
+  switch (rank) {
+    case 1:
+      return "bg-gradient-to-br from-amber-400 to-amber-600 text-white ring-amber-200";
+    case 2:
+      return "bg-gradient-to-br from-slate-300 to-slate-500 text-white ring-slate-100";
+    case 3:
+      return "bg-gradient-to-br from-orange-400 to-orange-700 text-white ring-orange-200";
+    default:
+      return "bg-slate-900/80 text-white ring-white";
+  }
+}
 
 function statusClasses(status?: Props["status"]) {
   switch (status) {
@@ -75,6 +91,7 @@ const ManCard = ({
   onAddToReadingList,
   isInReadingList,
   status,
+  index,
 }: Props) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -114,10 +131,23 @@ const ManCard = ({
     </button>
   );
 
+  // Cap the stagger so late/appended cards animate promptly as they mount.
+  const enterDelay =
+    index != null ? `${Math.min(index, 11) * 45}ms` : undefined;
+
   return (
-    <article className="group relative h-full w-full min-w-0">
+    <article
+      className={`group relative h-full w-full min-w-0${
+        index != null ? " tr-card-enter" : ""
+      }`}
+      style={enterDelay ? { ["--tr-delay" as string]: enterDelay } : undefined}
+    >
       {rank !== null && rank !== undefined ? (
-        <div className="absolute left-3 top-3 z-10 rounded-full bg-slate-900/80 px-2.5 py-1 text-sm font-bold text-white ring-2 ring-white shadow-sm">
+        <div
+          className={`absolute left-3 top-3 z-10 rounded-full px-2.5 py-1 text-sm font-bold shadow-sm ring-2 ${rankBadgeClasses(
+            rank
+          )}`}
+        >
           {typeof rank === "number" ? `#${rank}` : rank}
         </div>
       ) : null}

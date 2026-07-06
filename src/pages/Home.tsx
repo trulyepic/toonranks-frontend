@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLoaderData } from "react-router-dom";
 import ManCard from "../components/ManCard";
+import HomeTopTen from "../components/HomeTopTen";
 import AddSeriesModal from "../components/AddSeriesModal";
 import EditSeriesModal from "../components/EditSeriesModal";
 import {
@@ -343,7 +344,7 @@ const Home = () => {
             straight to the rankings. Also puts real above-the-fold copy (h1) in
             the server HTML for SEO. */}
         {!user && (
-          <section className="mb-4 rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_40%),linear-gradient(135deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.95))] px-5 py-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell sm:px-8 sm:py-7">
+          <section className="tr-aurora mb-4 overflow-hidden rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_40%),linear-gradient(135deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.95))] px-5 py-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell sm:px-8 sm:py-7">
             <h1 className="max-w-2xl text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
               Rank, compare, and keep up with the series worth your time.
             </h1>
@@ -368,6 +369,10 @@ const Home = () => {
             </div>
           </section>
         )}
+
+        {/* Top 10 showcase — overall highest-rated, from the SSR-seeded page 1
+            (stable regardless of grid filters). Hidden during text search. */}
+        {!searchTerm.trim() && <HomeTopTen items={initialItems} />}
 
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">
           <RankingsToolbar
@@ -449,9 +454,10 @@ const Home = () => {
                   <ShimmerLoader />
                 ) : (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                    {items.map((item) => (
+                    {items.map((item, i) => (
                       <ManCard
                         key={item.id}
+                        index={i < PAGE_SIZE ? i : undefined}
                         id={item.id}
                         rank={item.rank ?? "-"}
                         title={item.title}
