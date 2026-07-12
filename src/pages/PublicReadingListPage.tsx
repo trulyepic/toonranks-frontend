@@ -8,7 +8,7 @@ import {
   type PublicReadingList,
   type RankedSeries,
 } from "../api/manApi";
-import { ItemRowsShimmerBlock } from "../components/ReadingListShimmers";
+import { SharedListShimmerBlock } from "../components/ReadingListShimmers";
 import ShimmerBox from "../components/ShimmerBox";
 import {
   filterItemsByType,
@@ -412,7 +412,7 @@ export default function PublicReadingListPage() {
           <title>{pageTitle}</title>
           <meta name="robots" content="noindex,follow" />
         </Helmet>
-        <ItemRowsShimmerBlock count={6} />
+        <SharedListShimmerBlock layout={layout} count={6} />
       </div>
     );
   }
@@ -559,10 +559,16 @@ export default function PublicReadingListPage() {
           This list is empty.
         </div>
       ) : summariesLoading && Object.keys(summaries).length === 0 ? (
-        <ItemRowsShimmerBlock count={Math.min(list.items.length, 8)} />
+        <SharedListShimmerBlock
+          layout={layout}
+          count={Math.min(list.items.length, 8)}
+        />
       ) : isFiltered && !typesResolved ? (
         // Still loading the types we need before we can filter the full list.
-        <ItemRowsShimmerBlock count={Math.min(list.items.length, 8)} />
+        <SharedListShimmerBlock
+          layout={layout}
+          count={Math.min(list.items.length, 8)}
+        />
       ) : isFiltered && matchCount === 0 ? (
         <div className="rounded-[24px] border border-dashed border-slate-300 bg-white/80 px-6 py-12 text-center text-slate-600 shadow-sm dark:border-[#3a3028] dark:bg-[linear-gradient(145deg,_rgba(26,21,18,0.95),_rgba(19,16,13,0.95))] dark:text-slate-300">
           No{" "}
@@ -592,7 +598,7 @@ export default function PublicReadingListPage() {
           }
         >
           {visibleItems.length === 0 && summariesLoading ? (
-            <ItemRowsShimmerBlock count={6} />
+            <SharedListShimmerBlock layout={layout} count={6} />
           ) : (
             <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white/70 p-4 pb-10 shadow-[0_22px_55px_-40px_rgba(15,23,42,0.45)] backdrop-blur-sm dark:border-[#342a23] dark:bg-[#100d0b]/80 sm:p-5 sm:pb-11">
               <div className={layoutGridClass}>
