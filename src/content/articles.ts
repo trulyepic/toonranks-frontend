@@ -293,6 +293,57 @@ New to webtoons in general? Regression makes a great on-ramp, but our [beginner'
 
 Regression endures because it scratches a specific itch: the fantasy of knowing exactly what you'd do differently, and finally getting the shot. The best ones never forget that a do-over means nothing if it can't still go wrong. Find one that keeps the danger alive, and the premise stops feeling like a gimmick and starts feeling like a story.`,
   },
+  {
+    slug: "what-makes-a-satisfying-ending",
+    title: "What Makes an Ending Satisfying? Why Finished Series Win",
+    description:
+      "An ending is the only part of a story that can't be fixed later. What separates a real finale from a fizzle, and why completed series deserve priority.",
+    author: AUTHOR,
+    publishedAt: "2026-07-13",
+    updatedAt: "2026-07-13",
+    tags: ["Opinion", "Recommendations", "Rankings"],
+    body: `Every other part of a story can be rescued. A slow opening gets forgiven if the middle cooks. A weak arc becomes "the one you skim on reread." But the ending is the last thing a story says to you, and there's nothing after it to soften the blow. It's the only part that can't be fixed later.
+
+That's why the ending deserves more weight than we usually give it when deciding what to read. And it's why a finished series is a fundamentally different purchase than an ongoing one.
+
+## An ongoing series is a promise. A finished one is a verdict.
+
+When you rate a series mid-run, you're really rating its potential. The mystery boxes are still closed. The power system still seems like it has rules. The author still seems like they have a plan. You're extending credit.
+
+A finished series has settled the bill. Either the foreshadowing paid off or it turns out it was set dressing. Either the characters arrived somewhere or they walked in circles with better art. You're not betting anymore. You're inspecting a finished object, and the object can't disappoint you in chapter 300 because chapter 300 already exists and other readers have already been there.
+
+This is also why endings reprice everything that came before them. A great finale quietly upgrades the slow chapters into setup. A botched one downgrades years of buildup into padding. Readers don't remember stories as a running average. They remember how it felt to put the thing down.
+
+## "Satisfying" doesn't mean happy
+
+The endings people call satisfying have less to do with tone than with debt. A story spends its whole run writing checks: this rivalry will resolve, this lie will surface, this weakness will matter. A satisfying ending is one where the big checks clear.
+
+Notice what that doesn't require. It doesn't require every question answered; a story can leave the door open on its world and still close the book on its people. It doesn't require the leads to win. Bittersweet endings routinely outrank happy ones in readers' memories, because loss is proof the stakes were real.
+
+What it does require is consequence. If the final arc undoes its own costs, resurrects what it killed, or hands out victory in a way the story never earned, readers feel it instantly. Nobody has to explain why it rings hollow. Hollow is the feeling of a check bouncing.
+
+## The escalation trap
+
+There's a structural reason so many long action series struggle to land: their engine only turns one direction. When every arc's answer is a bigger threat and a higher power level, the story loses the ability to come back down, and an ending is exactly that, a controlled descent.
+
+You can often spot the trap before investing hundreds of chapters. If the tension only ever comes from scale, ask what the finale could even look like. Stories that build toward a question ("what does he do with the throne once he has it?") can end. Stories that build toward a number usually can't; they just stop.
+
+Cancellations and indefinite hiatuses are the other way a story just stops, and with serialized webtoons and manga they're a fact of life. It's nobody's fault as a reader. But it is a risk you're taking every time you start something unfinished, and it's a risk with no equivalent on the completed shelf.
+
+## How to actually use this
+
+None of this means ongoing series are a mistake. Reading a serial live, speculating between chapters, being part of the crowd when a big twist drops: that's half the fun of the medium and no completed binge replicates it.
+
+The practical move is weighting. Keep a few live serials for the weekly ritual, and point the rest of your backlog at finished work, where the verdict is already in. On [the rankings](/), the status filter will show you what's actually complete, and a finished series' story score is worth more than the same number on an ongoing one, because it includes the ending. That's a big part of why [category scores](/how-rankings-work) on completed series are the most trustworthy numbers on the site: nothing about them is a projection.
+
+And if you want somewhere to start, we've already pulled together [completed series worth binging in one sitting](/articles/completed-series-worth-binging), which is exactly this idea turned into a reading list.
+
+## Judge the landing
+
+Readers argue endlessly about art styles and pacing and which genre is oversaturated. Endings are quieter. They don't trend, because by the time a series ends, the crowd has usually moved on to whatever is currently airing its promises.
+
+But the landing is the story. It's the part you carry out of the building. Prioritize the series that stuck it, and you'll spend a lot less time feeling like you lent two hundred chapters to someone who never paid you back.`,
+  },
 ];
 
 const WORDS_PER_MINUTE = 200;

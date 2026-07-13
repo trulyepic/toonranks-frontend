@@ -20,6 +20,7 @@ how-the-site-works pieces.
 | `completed-series-worth-binging` | Completed Series Worth Binging in One Sitting | Curated/guide | Using "completed" status + category scores to pick safe binges |
 | `what-is-a-webtoon` | What Is a Webtoon? The Vertical-Scroll Format, Explained | Explainer | The vertical-scroll / infinite-canvas format (color, phone-first, episodic) vs origin; why it spread |
 | `regression-stories-explained` | Regression Stories Explained: The Appeal and the Catch | Genre spotlight | Regression vs reincarnation/isekai; foreknowledge as a fragile engine; how category scores spot the good ones |
+| `what-makes-a-satisfying-ending` | What Makes an Ending Satisfying? Why Finished Series Win | Opinion/analysis | Endings as verdicts vs promises; "satisfying = debts paid, not happy"; the escalation trap; weight backlog toward finished work |
 
 ---
 
@@ -40,7 +41,6 @@ move it here once published.
 **Opinion / analysis**
 - Why community category scores beat a single star rating (reader-facing angle, distinct from the how-it-works piece).
 - The "power fantasy" boom: what regression/leveling/tower stories get right (and where they get samey).
-- What makes a satisfying ending — and why finished series are worth prioritizing.
 
 **Genre / sub-genre spotlights**
 - Cultivation & xianxia for newcomers (manhua-leaning).
