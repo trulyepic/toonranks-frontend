@@ -22,6 +22,7 @@ import { useUser } from "../login/useUser";
 import ReadingListModal from "../components/ReadingListModal";
 import RankingsToolbar, { type SortValue } from "../components/RankingsToolbar";
 import { canSubmitSeriesUser, isAdminUser } from "../util/roleUtils";
+import { applySearchFilters } from "../util/searchFilter";
 import {
   absoluteUrl,
   DEFAULT_SOCIAL_IMAGE,
@@ -98,6 +99,10 @@ const Home = () => {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Series | null>(null);
   const [items, setItems] = useState<RankedSeries[]>(initialItems);
+  // Raw, unfiltered matches for the current search term. The search endpoint
+  // only accepts the query (+ optional type), so genre/status/sort are applied
+  // client-side (see `searchView`) without refetching on every filter change.
+  const [searchResults, setSearchResults] = useState<RankedSeries[]>([]);
   const { searchTerm } = useSearch();
   // Skip the first client load when the server already seeded page 1 (default
   // filters), so we don't clear the SSR cards on hydration. But when we mount
@@ -129,6 +134,25 @@ const Home = () => {
   const isAdmin = isAdminUser(user);
   const canSubmitSeries = canSubmitSeriesUser(user);
 
+  const isSearching = searchTerm.trim().length > 0;
+
+  // Search matches with the genre/status filters + sort applied client-side, so
+  // the toolbar controls work during a text search (the search API can't do it
+  // server-side).
+  const searchView = useMemo(
+    () =>
+      applySearchFilters(searchResults, {
+        genre: activeGenre,
+        status: activeStatus,
+        sort: sortBy,
+      }),
+    [searchResults, activeGenre, activeStatus, sortBy]
+  );
+
+  // What the grid renders: the filtered/sorted search view while searching,
+  // otherwise the paginated rankings.
+  const displayedItems = isSearching ? searchView : items;
+
   // Normalize a single genre label (e.g., "sci-fi" -> "Sci-Fi")
   const normalizeGenre = useCallback(
     (g: string) =>
@@ -140,10 +164,13 @@ const Home = () => {
     []
   );
 
-  // Genres seen in the currently loaded items
+  // Genres seen in the active dataset — the full search matches while searching
+  // (so every matchable genre is offered in the strip), otherwise the loaded
+  // rankings.
+  const genreSource = isSearching ? searchResults : items;
   const derivedGenres = useMemo(() => {
     const set = new Set<string>();
-    for (const it of items) {
+    for (const it of genreSource) {
       if (!it?.genre) continue;
       // support comma-separated genres like "Action, Thriller"
       const pieces = String(it.genre)
@@ -153,7 +180,7 @@ const Home = () => {
       pieces.forEach((p) => set.add(p));
     }
     return Array.from(set);
-  }, [items, normalizeGenre]);
+  }, [genreSource, normalizeGenre]);
 
   // Accumulate genres across loads so the strip only grows (and stays usable
   // even when a genre filter narrows the result set to a single genre).
@@ -276,50 +303,76 @@ const Home = () => {
   //   return compareList.some((item) => item.id === id);
   // };
 
-  // Reset and load page 1 whenever the search term or active filters change.
-  // Text search (from the nav bar) and the genre+status filters are separate
-  // modes: searching uses the search endpoint; otherwise genre + status compose
-  // server-side on the rankings endpoint.
+  // Fetch the raw search matches when the term changes. Genre/status/sort are
+  // NOT deps here — they're applied client-side in `searchView`, so changing a
+  // filter re-orders/narrows the existing results instead of refetching.
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (!term) {
+      setSearchResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const results = await searchSeries(term);
+        if (!cancelled) {
+          setSearchResults(results);
+          setHasMore(false);
+        }
+      } catch (err) {
+        if (!cancelled) console.error("Search failed:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchTerm]);
+
+  // Reset + load page 1 of the rankings whenever the genre/status/sort filters
+  // change — but only while NOT searching (search is handled above and filtered
+  // client-side). Composes genre + status + sort server-side on the rankings
+  // endpoint.
   useEffect(() => {
     if (skipInitialLoad.current) {
       skipInitialLoad.current = false;
       return;
     }
-    const fetchData = async () => {
-      if (searchTerm.trim()) {
-        try {
-          setLoading(true);
-          const results = await searchSeries(searchTerm);
-          setItems(results);
-          setHasMore(false);
-        } catch (err) {
-          console.error("Search failed:", err);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(true);
-        setItems([]);
-        setPage(1);
-        setHasMore(true);
+    if (searchTerm.trim()) return;
 
-        try {
-          const results = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
-            genre: activeGenre ?? undefined,
-            status: activeStatus ?? undefined,
-            sort: sortBy,
-          });
+    setLoading(true);
+    setItems([]);
+    setPage(1);
+    setHasMore(true);
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const results = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
+          genre: activeGenre ?? undefined,
+          status: activeStatus ?? undefined,
+          sort: sortBy,
+        });
+        if (!cancelled) {
           setItems(results);
           if (results.length < PAGE_SIZE) setHasMore(false);
-        } catch (err) {
-          console.error("Failed to fetch default ranked series:", err);
-        } finally {
-          setLoading(false);
         }
+      } catch (err) {
+        if (!cancelled)
+          console.error("Failed to fetch default ranked series:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    };
+    })();
 
-    fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [searchTerm, activeGenre, activeStatus, sortBy]);
 
   useEffect(() => {
@@ -380,7 +433,7 @@ const Home = () => {
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">
           <RankingsToolbar
             contextLabel="Rankings"
-            loadedCount={items.length}
+            loadedCount={displayedItems.length}
             activeStatus={activeStatus}
             activeGenre={activeGenre}
             genres={allGenres}
@@ -437,11 +490,11 @@ const Home = () => {
           <CompareManager>
             {({ toggleCompare, isSelectedForCompare }) => (
               <InfiniteScroll
-                dataLength={items.length}
+                dataLength={displayedItems.length}
                 next={() => setPage((prev) => prev + 1)}
-                hasMore={!searchTerm && hasMore}
+                hasMore={!isSearching && hasMore}
                 loader={
-                  items.length > 0 ? (
+                  displayedItems.length > 0 ? (
                     <div className="flex justify-center py-6">
                       <div className="w-6 h-6 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
                     </div>
@@ -453,11 +506,11 @@ const Home = () => {
                   </p>
                 }
               >
-                {items.length === 0 && loading ? (
+                {displayedItems.length === 0 && loading ? (
                   <ShimmerLoader />
                 ) : (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                    {items.map((item, i) => (
+                    {displayedItems.map((item, i) => (
                       <ManCard
                         key={item.id}
                         index={i < PAGE_SIZE ? i : undefined}
