@@ -783,12 +783,13 @@ export default function MyReadingListsPage() {
         return Array.from(map.values()).sort((a, b) => b.id - a.id);
       });
 
-      // ✅ NEW: expand all newly fetched lists by default
+      // Lists start collapsed by default — a compact overview scans better and
+      // items only load when a list is expanded. User toggles are preserved.
       setOpen((prev) => {
         const nextOpen: Record<number, boolean> = { ...prev };
         for (const l of res.items) {
-          // only set true if the user hasn't explicitly toggled this one before
-          if (prev[l.id] === undefined) nextOpen[l.id] = true;
+          // only set if the user hasn't explicitly toggled this one before
+          if (prev[l.id] === undefined) nextOpen[l.id] = false;
         }
         return nextOpen;
       });
