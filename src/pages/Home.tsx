@@ -98,10 +98,15 @@ const Home = () => {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<Series | null>(null);
   const [items, setItems] = useState<RankedSeries[]>(initialItems);
+  const { searchTerm } = useSearch();
   // Skip the first client load when the server already seeded page 1 (default
-  // filters), so we don't clear the SSR cards on hydration. Search/filter
-  // changes still reset + refetch.
-  const skipInitialLoad = useRef(initialItems.length > 0);
+  // filters), so we don't clear the SSR cards on hydration. But when we mount
+  // with an active search term (e.g. the user started searching from another
+  // page and was navigated here), the seeded cards are the ranked list, not the
+  // search — so don't skip, or the results would never load.
+  const skipInitialLoad = useRef(
+    initialItems.length > 0 && !searchTerm.trim()
+  );
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -120,8 +125,6 @@ const Home = () => {
   );
   const [myLists, setMyLists] = useState<ReadingList[] | null>(null); // null=unknown, []=none
 
-  // const { searchTerm } = useSearch();
-  const { searchTerm } = useSearch();
   const { user } = useUser();
   const isAdmin = isAdminUser(user);
   const canSubmitSeries = canSubmitSeriesUser(user);
