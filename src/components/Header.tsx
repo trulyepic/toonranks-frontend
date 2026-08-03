@@ -22,6 +22,12 @@ import NotificationBell from "./NotificationBell";
 
 const DEFAULT_LABEL = "ALL";
 
+// Pages that render title results from the shared search term: the All rankings
+// home ("/") and the per-type rankings ("/type/<TYPE>"). Searching from anywhere
+// else navigates here so the results are visible; clearing returns the user back.
+const isTitlesPath = (path: string) =>
+  path === "/" || path.startsWith("/type/");
+
 const selectedNavClasses =
   "bg-[linear-gradient(135deg,_#315ff4,_#2347c5)] text-white shadow-[0_12px_26px_-18px_rgba(35,71,197,0.7)] ring-1 ring-inset ring-blue-500/40 dark:bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.16),_transparent_40%),linear-gradient(145deg,_rgba(34,63,124,0.96),_rgba(23,44,96,0.96))] dark:text-white dark:ring-[#3056a5]";
 
@@ -69,6 +75,9 @@ const Header = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const mobileSearchControllerRef = useRef<AbortController | null>(null);
+  // The path the user was on when they started searching from a non-titles page,
+  // so clearing the search can return them there.
+  const searchReturnToRef = useRef<string | null>(null);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -94,6 +103,7 @@ const Header = () => {
 
   const handleHomeClick = () => {
     setSearchTerm("");
+    searchReturnToRef.current = null;
     setMobileMenuOpen(false);
     setMobileAccountOpen(false);
     setMobileSearchOpen(false);
@@ -112,6 +122,32 @@ const Header = () => {
       if (seg) return `/type/${seg}`;
     }
     return "/";
+  };
+
+  // Live search from the always-visible desktop input. Typing from a page that
+  // doesn't render title results jumps to the titles view so the matches show;
+  // clearing the input returns the user to wherever they started searching.
+  const handleSearchInput = (value: string) => {
+    const wasEmpty = !searchTerm.trim();
+    const nowEmpty = !value.trim();
+    setSearchTerm(value);
+
+    if (wasEmpty && !nowEmpty && !isTitlesPath(location.pathname)) {
+      searchReturnToRef.current =
+        location.pathname + location.search + location.hash;
+      navigate(searchBasePath(), { replace: true });
+      return;
+    }
+
+    if (!wasEmpty && nowEmpty && searchReturnToRef.current) {
+      const returnTo = searchReturnToRef.current;
+      searchReturnToRef.current = null;
+      // Only pull the user back if they're still on the titles view we sent
+      // them to; if they navigated off on their own, leave them be.
+      if (isTitlesPath(location.pathname)) {
+        navigate(returnTo, { replace: true });
+      }
+    }
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -326,7 +362,7 @@ const Header = () => {
               className="h-10 w-52 rounded-full border border-slate-200 bg-slate-50 pl-4 pr-11 text-sm text-slate-700 shadow-sm outline-none transition-all duration-200 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-200 dark-theme-field dark:focus:bg-[#181310] dark:focus:ring-[#2a221c] lg:w-64"
               placeholder="Search titles..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchInput(e.target.value)}
               aria-label="Search titles"
             />
             <button
