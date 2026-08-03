@@ -23,6 +23,7 @@ import ShimmerLoader from "../components/ShimmerLoader";
 import { useSearch } from "../components/useSearch";
 import { useUser } from "../login/useUser";
 import { isAdminUser } from "../util/roleUtils";
+import { applySearchFilters } from "../util/searchFilter";
 import {
   absoluteUrl,
   DEFAULT_SOCIAL_IMAGE,
@@ -71,6 +72,9 @@ const FilteredSeriesPage = () => {
   const initialItems =
     (useLoaderData() as { items?: RankedSeries[] } | null)?.items ?? [];
   const [items, setItems] = useState<RankedSeries[]>(initialItems);
+  // Raw, type-scoped search matches; genre/status/sort are applied client-side
+  // (the search endpoint can't) — see `searchView`.
+  const [searchResults, setSearchResults] = useState<RankedSeries[]>([]);
   const skipInitialLoad = useRef(initialItems.length > 0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -101,10 +105,31 @@ const FilteredSeriesPage = () => {
     []
   );
 
+  const isSearching = searchTerm.trim().length > 0;
+
+  // Search matches with the toolbar's genre/status filters + sort applied
+  // client-side, so those controls work during a text search.
+  const searchView = useMemo(
+    () =>
+      applySearchFilters(searchResults, {
+        genre: activeGenre,
+        status: activeStatus,
+        sort: sortBy,
+      }),
+    [searchResults, activeGenre, activeStatus, sortBy]
+  );
+
+  // What the grid renders: the filtered/sorted search view while searching,
+  // otherwise the paginated rankings.
+  const displayedItems = isSearching ? searchView : items;
+
+  // Base the genre strip on the active dataset — the full search matches while
+  // searching (so every matchable genre is offered), otherwise loaded rankings.
+  const genreSource = isSearching ? searchResults : items;
   const derivedGenres = useMemo(() => {
     const set = new Set<string>();
 
-    for (const item of items) {
+    for (const item of genreSource) {
       if (!item?.genre) continue;
       String(item.genre)
         .split(",")
@@ -114,7 +139,7 @@ const FilteredSeriesPage = () => {
     }
 
     return Array.from(set);
-  }, [items, normalizeGenre]);
+  }, [genreSource, normalizeGenre]);
 
   // Accumulate genres so the strip never collapses when a filter narrows results.
   useEffect(() => {
@@ -218,19 +243,58 @@ const FilteredSeriesPage = () => {
     [hasMore, seriesType, activeGenre, activeStatus, sortBy]
   );
 
-  // Reset + load page 1 whenever the type, search term, or genre/status filters
-  // change. Text search uses the search endpoint (then narrows to the page type
-  // client-side); otherwise type + genre + status compose server-side.
+  // Fetch the raw (type-scoped) search matches when the term or type changes.
+  // Genre/status/sort are NOT deps — they're applied client-side in `searchView`
+  // so changing a filter re-orders/narrows the results without a refetch. The
+  // page's type is passed so the backend scopes both results AND rank to this
+  // category, keeping each result's true within-type rank.
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (!seriesType || !term) {
+      setSearchResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const all = await searchSeries(term, {
+          type: seriesType.toUpperCase(),
+        });
+        if (!cancelled) {
+          setSearchResults(all);
+          setHasMore(false);
+        }
+      } catch (err: unknown) {
+        if (!cancelled && !isRequestCanceled(err)) {
+          console.error("Search failed:", err);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [seriesType, searchTerm]);
+
+  // Reset + load page 1 of the type's rankings when the genre/status/sort
+  // filters change — but only while NOT searching (search is handled above and
+  // filtered client-side). type + genre + status compose server-side.
   useEffect(() => {
     if (!seriesType) return;
 
     // Skip the first run when the server already seeded page 1 (default filters)
-    // so we don't clear the SSR cards on hydration. Filter/search/type changes
-    // still reset + refetch.
+    // so we don't clear the SSR cards on hydration. Filter/type changes still
+    // reset + refetch.
     if (skipInitialLoad.current) {
       skipInitialLoad.current = false;
       return;
     }
+
+    if (searchTerm.trim()) return;
 
     controllerRef.current?.abort();
     const controller = new AbortController();
@@ -247,26 +311,15 @@ const FilteredSeriesPage = () => {
     const run = async () => {
       setLoading(true);
       try {
-        if (searchTerm.trim()) {
-          // Pass the page's type so the backend scopes both results AND rank to
-          // this category — each result keeps its true rank within the type,
-          // instead of being re-ranked among the search matches.
-          const all = await searchSeries(searchTerm.trim(), {
-            type: seriesType.toUpperCase(),
-          });
-          setItems(all);
-          setHasMore(false);
-        } else {
-          const all = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
-            type: seriesType.toUpperCase(),
-            genre: activeGenre ?? undefined,
-            status: activeStatus ?? undefined,
-            sort: sortBy,
-            signal: controller.signal,
-          });
-          setItems(all);
-          setHasMore(all.length >= PAGE_SIZE);
-        }
+        const all = await fetchRankedSeriesPaginated(1, PAGE_SIZE, {
+          type: seriesType.toUpperCase(),
+          genre: activeGenre ?? undefined,
+          status: activeStatus ?? undefined,
+          sort: sortBy,
+          signal: controller.signal,
+        });
+        setItems(all);
+        setHasMore(all.length >= PAGE_SIZE);
       } catch (err: unknown) {
         if (!isRequestCanceled(err)) {
           console.error("Failed to fetch series:", err);
@@ -317,7 +370,7 @@ const FilteredSeriesPage = () => {
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] dark-theme-shell">
         <RankingsToolbar
           contextLabel={seriesType?.toUpperCase() ?? "Rankings"}
-          loadedCount={items.length}
+          loadedCount={displayedItems.length}
           activeStatus={activeStatus}
           activeGenre={activeGenre}
           genres={allGenres}
@@ -346,25 +399,27 @@ const FilteredSeriesPage = () => {
               <InfiniteScroll
                 className="no-scrollbar"
                 style={{ overflow: "visible" }}
-                dataLength={items.length}
+                dataLength={displayedItems.length}
                 next={() => setPage((prev) => prev + 1)}
-                hasMore={!searchTerm.trim() && hasMore}
+                hasMore={!isSearching && hasMore}
                 loader={
-                  items.length > 0 ? (
+                  displayedItems.length > 0 ? (
                     <p className="py-6 text-center text-gray-500 dark:text-slate-400">Loading...</p>
                   ) : null
                 }
                 endMessage={
-                  !loading && items.length > 0 ? (
+                  !loading && displayedItems.length > 0 ? (
                     <p className="py-6 text-center text-gray-400 dark:text-slate-500">
                       You've seen everything. New series are added periodically.
                     </p>
                   ) : null
                 }
               >
-                {items.length === 0 && loading ? <ShimmerLoader /> : null}
+                {displayedItems.length === 0 && loading ? (
+                  <ShimmerLoader />
+                ) : null}
 
-                {items.length === 0 && !loading ? (
+                {displayedItems.length === 0 && !loading ? (
                   <div className="py-12 text-center text-gray-600 dark:text-slate-300">
                     <p className="mb-3">
                       {activeGenre || activeStatus
@@ -387,9 +442,9 @@ const FilteredSeriesPage = () => {
                   </div>
                 ) : null}
 
-                {items.length > 0 ? (
+                {displayedItems.length > 0 ? (
                   <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                    {items.map((item, i) => (
+                    {displayedItems.map((item, i) => (
                       <ManCard
                         key={item.id}
                         index={i < PAGE_SIZE ? i : undefined}
