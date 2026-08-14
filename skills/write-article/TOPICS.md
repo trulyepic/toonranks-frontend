@@ -21,6 +21,7 @@ how-the-site-works pieces.
 | `what-is-a-webtoon` | What Is a Webtoon? The Vertical-Scroll Format, Explained | Explainer | The vertical-scroll / infinite-canvas format (color, phone-first, episodic) vs origin; why it spread |
 | `regression-stories-explained` | Regression Stories Explained: The Appeal and the Catch | Genre spotlight | Regression vs reincarnation/isekai; foreknowledge as a fragile engine; how category scores spot the good ones |
 | `what-makes-a-satisfying-ending` | What Makes an Ending Satisfying? Why Finished Series Win | Opinion/analysis | Endings as verdicts vs promises; "satisfying = debts paid, not happy"; the escalation trap; weight backlog toward finished work |
+| `heavy-knight-episode-7-slow-pacing` | Heavy Knight Episode 7 Review: One Toad, Slowly | Opinion/review | Episode 7 as a pacing warning: a full installment stretched around Golden Raana farming and one toad stab |
 
 ---
 
