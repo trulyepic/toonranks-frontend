@@ -86,6 +86,69 @@ function formatDate(iso: string): string {
   });
 }
 
+function ArticleTitleCard({ article }: { article: Article }) {
+  const card = article.titleCard;
+  if (!card) return null;
+
+  const content = (
+    <div className="my-7 rounded-lg border border-slate-200 bg-slate-50 p-5 not-prose shadow-sm transition hover:border-blue-300 hover:bg-white hover:shadow-md dark:border-[#3a3028] dark:bg-[#1d1714] dark:hover:border-blue-500/60 dark:hover:bg-[#211a16]">
+      <p className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-300">
+        {card.eyebrow}
+      </p>
+      <h2 className="mt-2 text-xl font-black tracking-tight text-slate-950 dark:text-white">
+        {card.title}
+      </h2>
+      <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+        {card.subtitle}
+      </p>
+      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        {card.meta}
+      </p>
+      {card.href && (
+        <p className="mt-4 inline-flex rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white dark:bg-blue-500">
+          {card.cta ?? "Open title"}
+        </p>
+      )}
+    </div>
+  );
+
+  return card.href ? (
+    <Link to={card.href} className="block no-underline" aria-label={`Open ${card.title}`}>
+      {content}
+    </Link>
+  ) : (
+    content
+  );
+}
+
+function ArticleBody({ article }: { article: Article }) {
+  const marker = "{{titleCard}}";
+  const parts = article.body.split(marker);
+
+  if (parts.length === 1) {
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+        {article.body}
+      </ReactMarkdown>
+    );
+  }
+
+  return (
+    <>
+      {parts.map((part, index) => (
+        <div key={index}>
+          {part.trim() && (
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+              {part}
+            </ReactMarkdown>
+          )}
+          {index < parts.length - 1 && <ArticleTitleCard article={article} />}
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function ArticlePage() {
   const { article } = useLoaderData() as ArticleLoaderData;
 
@@ -125,9 +188,7 @@ export default function ArticlePage() {
         )}
 
         <div className="prose prose-slate mt-8 max-w-none dark:prose-invert prose-headings:font-black prose-headings:tracking-tight prose-a:text-blue-600 dark:prose-a:text-blue-300 prose-img:rounded-xl">
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-            {article.body}
-          </ReactMarkdown>
+          <ArticleBody article={article} />
         </div>
 
         <div className="mt-8 flex flex-wrap gap-2 border-t border-slate-200 pt-6 dark:border-[#322922]">

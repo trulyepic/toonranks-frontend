@@ -21,6 +21,15 @@ export interface Article {
    * absolute URL. When omitted, the article renders cleanly text-only.
    */
   image?: { src: string; alt: string };
+  /** Optional in-article card for a title, series, or reviewed work. */
+  titleCard?: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    meta: string;
+    href?: string;
+    cta?: string;
+  };
   /** Original long-form body in Markdown. */
   body: string;
 }
@@ -28,6 +37,67 @@ export interface Article {
 const AUTHOR = "The Toon Ranks Team";
 
 export const articles: Article[] = [
+  {
+    slug: "heavy-knight-episode-7-slow-pacing",
+    title: "Heavy Knight Episode 7 Review: One Toad, Slowly",
+    description:
+      "Episode 7 turns Golden Raana farming into a patience test, spending almost a full installment on the road to one toad stab.",
+    author: AUTHOR,
+    publishedAt: "2026-08-14",
+    updatedAt: "2026-08-14",
+    tags: ["Opinion", "Anime", "Reviews"],
+    image: {
+      src: "/articles/heavy-knight-episode-7-slow-pacing/hero.png",
+      alt: "A generic armored adventurer facing a giant golden toad in a dungeon",
+    },
+    titleCard: {
+      eyebrow: "Episode Review",
+      title: "The Exiled Heavy Knight Knows How to Game the System",
+      subtitle: "Episode 7, Golden Raana Farming",
+      meta: "Anime | Action fantasy | Summer 2026",
+      href: "/series/148",
+      cta: "Open title page",
+    },
+    body: `Episode 7 has the confidence of a show that believes farming one rare monster is inherently thrilling. Sometimes it is. A dungeon run can turn into a great bottle episode if the trap is clever, the party dynamic sharpens, or the fight reveals something ugly about the characters. Here, though, The Exiled Heavy Knight Knows How to Game the System spends nearly the whole installment walking us toward a single point: Elma needs to stab a big golden toad-like target, and the anime is going to make sure we feel every step of that errand.
+
+The result is not unwatchable. It is worse in a more specific way. It is watchable enough that you keep waiting for the pace to click, then the credits arrive and you realize the episode treated a setup beat like a boss arc.
+
+{{titleCard}}
+
+## Farming Is Fine. Padding Is Different
+
+The public listing for Episode 7 gives the game away with the title, **Golden Raana Farming**. That is a funny title because it sounds like the show knows exactly what kind of RPG chore it is adapting. Farming can be satisfying in a game because the player is doing the optimization: checking drop rates, choosing a route, squeezing value out of a build. In an anime, the same material needs a second engine. The viewer is not pressing buttons, so the episode has to turn the process into tension, comedy, character friction, or spectacle.
+
+Episode 7 gestures at those things without committing hard enough to any of them. Elma's whole appeal is that he sees the world as a system nobody else understands. Luce adds a welcome chaos factor because her value comes from luck and class synergy rather than raw damage. On paper, this should be the episode where their partnership starts feeling dangerous and fun.
+
+Instead, the episode keeps sanding that idea down into procedure. We get explanations, positioning, reminders of the plan, little bits of hesitation, then more runway before the actual payoff. The show wants the Golden Raana to feel like a lucrative target. What it mainly proves is that a rare monster can still be boring if the adaptation makes the hunt feel like paperwork.
+
+## The Toad Stab Should Not Feel This Heavy
+
+There is something almost heroic about devoting this much screen time to one stab. Not a duel. Not a layered tactical exchange. One carefully arranged, heavily telegraphed attempt to bring down a toad.
+
+That sounds snarky, but the problem is structural. Heavy Knight is built around game knowledge, so the action often depends on Elma explaining why a choice matters before he makes it. That can work when the explanation recontextualizes the fight. Episode 2's appeal, for example, came from watching an apparently weak class reveal an answer nobody else saw. Episode 7 is operating with less surprise. We already know Elma knows the trick. We already know Luce's luck is useful. We already know the farming target matters because the episode keeps telling us.
+
+So when the story finally narrows to the stab, the moment arrives with less force than it should. The scene has been inflated, not built. A strong slow episode tightens around a payoff. This one stretches toward it.
+
+## Luce Helps, But She Cannot Carry the Crawl
+
+Luce is still the best thing that has happened to the show recently. Her nervous energy pushes against Elma's calm, and the idea that a discarded Pierrot class can become valuable in the right build fits the series perfectly. That is the good version of Heavy Knight: not just "the hero is secretly overpowered," but "the hero knows how to read value where everyone else sees junk."
+
+The issue is that Episode 7 does not give that dynamic enough room to breathe as a relationship. It mostly uses Luce as a mechanical component in Elma's plan. That is partly the point, since Elma is a min-maxer at heart, but the anime needs more human texture around the optimization. Let her panic ruin a timing window. Let her luck create a weird complication. Let the two of them argue about risk for more than a beat.
+
+Without that, the episode turns its best character into a stat bonus with a voice.
+
+## Slow Pacing Is Becoming the Real Enemy
+
+The strange thing is that Heavy Knight has a solid hook. It understands why trash-class fantasy works: readers and viewers love watching a supposedly useless build become broken when someone finally understands the rules. If this were a Toon Ranks title page, this is exactly the kind of series where I would look past the overall score and check the category breakdown on [how the rankings work](/how-rankings-work). Story and pacing would matter more than raw action, because the premise lives or dies on whether the system play stays fresh.
+
+Episode 7 is where that concern gets loud. A story about gaming the system cannot afford to feel like it is grinding its own runtime. Farming arcs need momentum. They need a sense that every minute is either teaching us a rule, stressing the party, or escalating the reward. When the episode spends this much time on the path to one toad stab, the adaptation starts looking less strategic than stalled.
+
+That does not mean the show is doomed. Elma and Luce are a better pair than Elma alone, and the dungeon material still has room to become more playful. But if the anime wants viewers to care about drop rates, builds, and rare spawns, it has to make those mechanics feel alive on screen. Otherwise, the smartest move is to open [Compare](/compare), put this next to a faster-moving fantasy series, and ask which one respects your time.
+
+Episode 7 is not a disaster. It is a warning light. Heavy Knight knows how to game the system, but right now the system it most needs to beat is its own pacing.`,
+  },
   {
     slug: "manga-vs-manhwa-vs-manhua",
     title: "Manga vs Manhwa vs Manhua: What's Actually Different?",
