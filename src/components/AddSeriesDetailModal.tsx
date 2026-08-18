@@ -2,6 +2,11 @@ import { useState } from "react";
 import { createSeriesDetail } from "../api/manApi";
 import { useUser } from "../login/useUser";
 import { isAdminRole } from "../util/roleUtils";
+import CoverImageEditor from "./CoverImageEditor";
+
+const DETAIL_COVER_WIDTH = 600;
+const DETAIL_COVER_HEIGHT = 400;
+const DETAIL_COVER_MAX_SIZE_KB = 800;
 
 const AddSeriesDetailModal = ({
   seriesId,
@@ -18,24 +23,33 @@ const AddSeriesDetailModal = ({
   const isAdmin = isAdminRole(user?.role);
   const [synopsis, setSynopsis] = useState(initialSynopsis);
   const [cover, setCover] = useState<File | null>(null);
+  const [coverPending, setCoverPending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMode, setSavedMode] = useState<"created" | "review" | null>(null);
-
-  const MAX_SIZE_KB = 800;
+  const canSaveDetails =
+    Boolean(synopsis.trim() && (hasExistingDetails || cover)) &&
+    !coverPending &&
+    !loading;
 
   const handleSubmit = async () => {
-    if (!synopsis.trim() || (!hasExistingDetails && !cover)) {
-      setError(
-        hasExistingDetails
-          ? "Synopsis is required."
-          : "Synopsis and detail cover are required."
-      );
+    if (!synopsis.trim()) {
+      setError("Synopsis is required.");
+      return;
+    }
+
+    if (!hasExistingDetails && !cover) {
+      setError("Choose an image, then click Make correct wide cover.");
+      return;
+    }
+
+    if (coverPending) {
+      setError("Finish the detail cover image before saving.");
       return;
     }
 
     const fileSizeKB = cover ? cover.size / 1024 : 0;
-    if (cover && fileSizeKB > MAX_SIZE_KB) {
+    if (cover && fileSizeKB > DETAIL_COVER_MAX_SIZE_KB) {
       setError("Cover image must be less than 800KB.");
       return;
     }
@@ -63,7 +77,7 @@ const AddSeriesDetailModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
-      <div className="dark-theme-shell w-full max-w-lg rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.22)] dark:border-[#3a3028]">
+      <div className="dark-theme-shell max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.22)] dark:border-[#3a3028]">
         {savedMode ? (
           <div className="space-y-5">
             <div>
@@ -137,21 +151,27 @@ const AddSeriesDetailModal = ({
             />
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-stone-200">
-              Detail Cover Image
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setCover(e.target.files?.[0] || null)}
-              className="block w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700 file:mr-4 file:rounded-xl file:border file:border-slate-200 file:bg-slate-50 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-100 dark:border-[#3a3028] dark:text-stone-300 dark:file:border-[#3a3028] dark:file:bg-[#18120f] dark:hover:file:bg-[#241d19]"
-            />
-            <p className="mt-2 text-xs text-slate-500 dark:text-stone-400">
-              Recommended size: 600x400px. Max size: 800KB.
-              {hasExistingDetails ? " Upload a new image only if you want to replace the current cover." : ""}
-            </p>
-          </div>
+          <CoverImageEditor
+            id={`detail-cover-upload-${seriesId}`}
+            label="Detail cover image"
+            helperText={`Use the wide guide to frame the detail-page banner. The editor exports ${DETAIL_COVER_WIDTH}x${DETAIL_COVER_HEIGHT}px under ${DETAIL_COVER_MAX_SIZE_KB}KB.${
+              hasExistingDetails
+                ? " Choose a new image only if you want to replace the current cover."
+                : ""
+            }`}
+            aspectLabel="3:2"
+            actionLabel="Make correct wide cover"
+            outputSuffix="wide-cover"
+            outputWidth={DETAIL_COVER_WIDTH}
+            outputHeight={DETAIL_COVER_HEIGHT}
+            maxSizeKB={DETAIL_COVER_MAX_SIZE_KB}
+            required={!hasExistingDetails}
+            onChange={(file) => {
+              setCover(file);
+              if (file) setError(null);
+            }}
+            onPendingChange={setCoverPending}
+          />
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
@@ -163,7 +183,7 @@ const AddSeriesDetailModal = ({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={!canSaveDetails}
             className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
           >
             {loading
