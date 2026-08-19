@@ -742,8 +742,8 @@ export const editSeries = async (
   if (data.type !== undefined) form.append("type", data.type);
   if (data.author !== undefined) form.append("author", data.author);
   if (data.artist !== undefined) form.append("artist", data.artist);
-  if (data.status !== undefined && data.status !== null) {
-    form.append("status", data.status);
+  if (data.status !== undefined) {
+    form.append("status", data.status ?? "");
   }
   if (data.cover instanceof File) {
     form.append("cover", data.cover);

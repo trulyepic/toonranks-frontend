@@ -351,11 +351,43 @@ const FilteredSeriesPage = () => {
     try {
       await deleteSeries(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
+      setSearchResults((prev) => prev.filter((item) => item.id !== id));
     } catch (err) {
       alert("Delete failed");
       console.error(err);
     }
   };
+
+  const mergeUpdatedSeries = useCallback(
+    (item: RankedSeries, updated: Series): RankedSeries => ({
+      ...item,
+      title: updated.title,
+      genre: updated.genre,
+      type: updated.type,
+      cover_url: updated.cover_url,
+      vote_count: updated.vote_count,
+      author: updated.author,
+      artist: updated.artist,
+      status: updated.status,
+      approval_status: updated.approval_status,
+    }),
+    []
+  );
+
+  const keepInCurrentTypeView = useCallback(
+    (item: RankedSeries) => {
+      if (seriesType && item.type !== seriesType.toUpperCase()) return false;
+      if (activeStatus && item.status !== activeStatus) return false;
+      if (activeGenre) {
+        const genres = String(item.genre || "")
+          .split(",")
+          .map((entry) => normalizeGenre(entry.trim()));
+        if (!genres.includes(activeGenre)) return false;
+      }
+      return true;
+    },
+    [activeGenre, activeStatus, normalizeGenre, seriesType]
+  );
 
   return (
     <div className="mx-auto w-full max-w-7xl px-3 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
@@ -481,11 +513,29 @@ const FilteredSeriesPage = () => {
               id={editItem.id}
               initialData={editItem}
               onClose={() => setEditItem(null)}
-              onSuccess={() => {
-                setItems([]);
-                setPage(1);
-                setHasMore(true);
-                loadSeries(1);
+              onSuccess={(updated) => {
+                setItems((prev) =>
+                  prev
+                    .map((item) =>
+                      item.id === updated.id
+                        ? mergeUpdatedSeries(item, updated)
+                        : item
+                    )
+                    .filter(keepInCurrentTypeView)
+                );
+                setSearchResults((prev) =>
+                  prev
+                    .map((item) =>
+                      item.id === updated.id
+                        ? mergeUpdatedSeries(item, updated)
+                        : item
+                    )
+                    .filter((item) =>
+                      seriesType
+                        ? item.type === seriesType.toUpperCase()
+                        : true
+                    )
+                );
               }}
             />
           ) : null}

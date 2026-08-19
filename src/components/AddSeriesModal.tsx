@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createSeries } from "../api/manApi";
 import type { Series, SeriesPayload } from "../api/manApi";
@@ -12,6 +13,9 @@ interface Props {
 
 const fieldClass =
   "dark-theme-field w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-slate-900 placeholder:text-slate-400 dark:border-[#3a3028] dark:text-stone-100 dark:placeholder:text-stone-500";
+const selectClass = `${fieldClass} cursor-pointer appearance-none pr-12`;
+const selectIconClass =
+  "pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-stone-300";
 
 const TITLE_COVER_WIDTH = 600;
 const TITLE_COVER_HEIGHT = 900;
@@ -169,37 +173,43 @@ const AddSeriesModal = ({ onClose }: Props) => {
             className={fieldClass}
             onChange={(e) => setForm({ ...form, artist: e.target.value })}
           />
-          <select
-            className={fieldClass}
-            onChange={(e) =>
-              setForm({ ...form, type: e.target.value as SeriesPayload["type"] })
-            }
-          >
-            <option value="">Select Type</option>
-            <option value="MANGA">Manga</option>
-            <option value="MANHWA">Manhwa</option>
-            <option value="MANHUA">Manhua</option>
-          </select>
+          <div className="relative">
+            <select
+              className={selectClass}
+              onChange={(e) =>
+                setForm({ ...form, type: e.target.value as SeriesPayload["type"] })
+              }
+            >
+              <option value="">Select Type</option>
+              <option value="MANGA">Manga</option>
+              <option value="MANHWA">Manhwa</option>
+              <option value="MANHUA">Manhua</option>
+            </select>
+            <ChevronDown className={selectIconClass} aria-hidden="true" />
+          </div>
 
-          <select
-            className={fieldClass}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                status:
-                  e.target.value === ""
-                    ? undefined
-                    : (e.target.value as SeriesPayload["status"]),
-              })
-            }
-          >
-            <option value="">Status (optional)</option>
-            <option value="ONGOING">Ongoing</option>
-            <option value="COMPLETE">Complete</option>
-            <option value="HIATUS">Hiatus</option>
-            <option value="SEASON_END">Season End</option>
-            <option value="UNKNOWN">Unknown</option>
-          </select>
+          <div className="relative">
+            <select
+              className={selectClass}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  status:
+                    e.target.value === ""
+                      ? undefined
+                      : (e.target.value as SeriesPayload["status"]),
+                })
+              }
+            >
+              <option value="">Status (optional)</option>
+              <option value="ONGOING">Ongoing</option>
+              <option value="COMPLETE">Complete</option>
+              <option value="HIATUS">Hiatus</option>
+              <option value="SEASON_END">Season End</option>
+              <option value="UNKNOWN">Unknown</option>
+            </select>
+            <ChevronDown className={selectIconClass} aria-hidden="true" />
+          </div>
 
           <CoverImageEditor
             id="cover-upload"

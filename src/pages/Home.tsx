@@ -385,11 +385,42 @@ const Home = () => {
     try {
       await deleteSeries(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
+      setSearchResults((prev) => prev.filter((item) => item.id !== id));
     } catch (err) {
       alert("Failed to delete.");
       console.error(err);
     }
   };
+
+  const mergeUpdatedSeries = useCallback(
+    (item: RankedSeries, updated: Series): RankedSeries => ({
+      ...item,
+      title: updated.title,
+      genre: updated.genre,
+      type: updated.type,
+      cover_url: updated.cover_url,
+      vote_count: updated.vote_count,
+      author: updated.author,
+      artist: updated.artist,
+      status: updated.status,
+      approval_status: updated.approval_status,
+    }),
+    []
+  );
+
+  const keepInCurrentRankingView = useCallback(
+    (item: RankedSeries) => {
+      if (activeStatus && item.status !== activeStatus) return false;
+      if (activeGenre) {
+        const genres = String(item.genre || "")
+          .split(",")
+          .map((entry) => normalizeGenre(entry.trim()));
+        if (!genres.includes(activeGenre)) return false;
+      }
+      return true;
+    },
+    [activeGenre, activeStatus, normalizeGenre]
+  );
   // console.log("Items:", items);
   return (
     <>
@@ -553,11 +584,23 @@ const Home = () => {
               id={editItem.id}
               initialData={editItem}
               onClose={() => setEditItem(null)}
-              onSuccess={() => {
-                setItems([]);
-                setPage(1);
-                setHasMore(true);
-                loadSeries(); // Refresh after edit
+              onSuccess={(updated) => {
+                setItems((prev) =>
+                  prev
+                    .map((item) =>
+                      item.id === updated.id
+                        ? mergeUpdatedSeries(item, updated)
+                        : item
+                    )
+                    .filter(keepInCurrentRankingView)
+                );
+                setSearchResults((prev) =>
+                  prev.map((item) =>
+                    item.id === updated.id
+                      ? mergeUpdatedSeries(item, updated)
+                      : item
+                  )
+                );
               }}
             />
           )}

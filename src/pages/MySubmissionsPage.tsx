@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getMySubmittedSeries, type PendingSeries } from "../api/manApi";
+import {
+  getMySubmittedSeries,
+  type PendingSeries,
+  type Series,
+} from "../api/manApi";
 import { useUser } from "../login/useUser";
 import { canSubmitSeriesUser } from "../util/roleUtils";
 import EditSeriesModal from "../components/EditSeriesModal";
@@ -19,6 +23,22 @@ export default function MySubmissionsPage() {
   const [editItem, setEditItem] = useState<PendingSeries | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const mergeUpdatedSubmission = (
+    item: PendingSeries,
+    updated: Series
+  ): PendingSeries => ({
+    ...item,
+    title: updated.title,
+    genre: updated.genre,
+    type: updated.type,
+    cover_url: updated.cover_url,
+    vote_count: updated.vote_count,
+    author: updated.author,
+    artist: updated.artist,
+    status: updated.status,
+    approval_status: updated.approval_status,
+  });
 
   useEffect(() => {
     if (!canSubmit) return;
@@ -237,13 +257,14 @@ export default function MySubmissionsPage() {
             status: editItem.status ?? null,
           }}
           onClose={() => setEditItem(null)}
-          onSuccess={async () => {
-            try {
-              const rows = await getMySubmittedSeries();
-              setItems(rows);
-            } catch (err) {
-              console.error("Failed to refresh submissions:", err);
-            }
+          onSuccess={(updated) => {
+            setItems((prev) =>
+              prev.map((item) =>
+                item.id === updated.id
+                  ? mergeUpdatedSubmission(item, updated)
+                  : item
+              )
+            );
           }}
         />
       )}
