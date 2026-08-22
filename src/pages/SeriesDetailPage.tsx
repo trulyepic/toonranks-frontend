@@ -4,6 +4,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import SeriesDetail from "../components/SeriesDetail";
 import RelatedArticles from "../components/RelatedArticles";
 import AddSeriesDetailModal from "../components/AddSeriesDetailModal";
+import MarkdownProse from "../components/MarkdownProse";
 import {
   getSeriesDetailById,
   getSeriesSummary,
@@ -23,10 +24,11 @@ import {
   DEFAULT_SOCIAL_IMAGE,
   SITE_NAME,
 } from "../config/site";
+import { mdToPlainText } from "../util/strings";
 
 // SSR loader: runs on the server for every /series/:id request (any id, including
-// series added since the last deploy), so the synopsis/title/author land in the
-// initial HTML for crawlers. The client also revalidates via the effects below.
+// series added since the last deploy), so the title details/title/author land
+// in the initial HTML for crawlers. The client also revalidates via the effects below.
 type SeriesLoaderData = {
   seriesDetail: SeriesDetailData | null;
   summary: RankedSeries | null;
@@ -71,7 +73,7 @@ export function meta({
   const detail = data?.seriesDetail;
   const displayTitle = seriesDisplayTitle(data, id);
   const description =
-    detail?.synopsis?.slice(0, 150) ??
+    (detail?.synopsis ? mdToPlainText(detail.synopsis).slice(0, 150) : undefined) ??
     "Explore detailed information and ratings for this manga/manhwa/manhua series.";
   const image = detail?.series_cover_url || DEFAULT_SOCIAL_IMAGE;
   const url = absoluteUrl(`/series/${id}`);
@@ -102,7 +104,9 @@ export function meta({
           : undefined,
         image: detail?.series_cover_url || undefined,
         url,
-        description: detail?.synopsis?.slice(0, 300),
+        description: detail?.synopsis
+          ? mdToPlainText(detail.synopsis).slice(0, 300)
+          : undefined,
       },
     },
   ];
@@ -136,8 +140,8 @@ const SeriesDetailPage = () => {
   };
   const { title, genre, type, author, artist } = locationState;
 
-  // Seed from the SSR loader so the synopsis/title/author are in the server HTML
-  // (and match the first client render). The effects below still refetch live.
+  // Seed from the SSR loader so the title details/title/author are in the
+  // server HTML and match the first client render. The effects below still refetch live.
   const loaderData = useLoaderData() as SeriesLoaderData;
   const loadedSummary = loaderData?.summary ?? null;
 
@@ -482,11 +486,20 @@ const SeriesDetailPage = () => {
 
                 <div className="mt-6 rounded-[26px] border border-slate-200 bg-white/92 p-5 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.45)] dark-theme-card-soft dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.85)]">
                   <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                    Synopsis
+                    Title details
                   </h2>
-                  <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-[15px]">
-                    {seriesDetail.synopsis || "Synopsis coming soon."}
-                  </p>
+                  {seriesDetail.synopsis ? (
+                    <MarkdownProse
+                      size="sm"
+                      className="mt-3 text-slate-600 dark:text-slate-300 sm:text-[15px]"
+                    >
+                      {seriesDetail.synopsis}
+                    </MarkdownProse>
+                  ) : (
+                    <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-[15px]">
+                      Title details coming soon.
+                    </p>
+                  )}
                 </div>
               </div>
             </section>
@@ -541,6 +554,7 @@ const SeriesDetailPage = () => {
         <AddSeriesDetailModal
           seriesId={series.id}
           initialSynopsis={seriesDetail?.synopsis ?? ""}
+          initialCoverUrl={seriesDetail?.series_cover_url ?? null}
           hasExistingDetails={hasExistingTitleDetails}
           onClose={() => setShowEditModal(false)}
         />

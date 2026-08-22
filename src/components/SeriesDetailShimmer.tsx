@@ -19,7 +19,7 @@ const SeriesDetailShimmer = () => {
         <ShimmerBox className="w-32 h-16 rounded-2xl" />
       </div>
 
-      {/* Synopsis */}
+      {/* Title details */}
       <div className="rounded p-4 space-y-3 bg-white shadow dark:bg-[linear-gradient(145deg,_rgba(27,22,19,0.96),_rgba(21,17,14,0.96))] dark:shadow-[0_18px_40px_-30px_rgba(0,0,0,0.75)]">
         <ShimmerBox className="h-6 w-40" />
         <ShimmerBox className="h-4 w-full" />
