@@ -15,6 +15,7 @@ type Props = {
     type: SeriesType;
     author?: string;
     artist?: string;
+    cover_url?: string | null;
     status?:
       | "ONGOING"
       | "COMPLETE"
@@ -170,6 +171,8 @@ const EditSeriesModal = ({ id, initialData, onClose, onSuccess }: Props) => {
             outputWidth={TITLE_COVER_WIDTH}
             outputHeight={TITLE_COVER_HEIGHT}
             maxSizeKB={TITLE_COVER_MAX_SIZE_KB}
+            initialImageUrl={initialData.cover_url}
+            initialImageName={`${initialData.title}-cover.png`}
             onChange={(file) => {
               setCover(file);
               if (file) setError(null);

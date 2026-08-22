@@ -11,11 +11,13 @@ const DETAIL_COVER_MAX_SIZE_KB = 800;
 const AddSeriesDetailModal = ({
   seriesId,
   initialSynopsis = "",
+  initialCoverUrl,
   hasExistingDetails = false,
   onClose,
 }: {
   seriesId: number;
   initialSynopsis?: string;
+  initialCoverUrl?: string | null;
   hasExistingDetails?: boolean;
   onClose: () => void;
 }) => {
@@ -34,7 +36,7 @@ const AddSeriesDetailModal = ({
 
   const handleSubmit = async () => {
     if (!synopsis.trim()) {
-      setError("Synopsis is required.");
+      setError("Title details are required.");
       return;
     }
 
@@ -86,8 +88,8 @@ const AddSeriesDetailModal = ({
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-stone-300">
                 {savedMode === "created"
-                  ? "The synopsis and wide cover are saved. This title is now available immediately."
-                  : "The synopsis and wide cover are complete. This title is now waiting for admin approval."}
+                  ? "The title details and wide cover are saved. This title is now available immediately."
+                  : "The title details and wide cover are complete. This title is now waiting for admin approval."}
               </p>
             </div>
 
@@ -121,8 +123,8 @@ const AddSeriesDetailModal = ({
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-stone-300">
               {hasExistingDetails
-                ? "Update the synopsis or replace the detail cover for this title."
-                : "Add the synopsis and detail cover for this title."}
+                ? "Update the title details or replace the detail cover for this title."
+                : "Add the title details and detail cover for this title."}
             </p>
           </div>
           <button
@@ -141,13 +143,13 @@ const AddSeriesDetailModal = ({
           )}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-stone-200">
-              Synopsis
+              Title details
             </label>
             <textarea
               value={synopsis}
               onChange={(e) => setSynopsis(e.target.value)}
               className="dark-theme-field h-32 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-slate-900 placeholder:text-slate-400 dark:border-[#3a3028] dark:text-stone-100 dark:placeholder:text-stone-500"
-              placeholder="Enter synopsis..."
+              placeholder="Enter title details. Markdown is supported."
             />
           </div>
 
@@ -166,6 +168,8 @@ const AddSeriesDetailModal = ({
             outputHeight={DETAIL_COVER_HEIGHT}
             maxSizeKB={DETAIL_COVER_MAX_SIZE_KB}
             required={!hasExistingDetails}
+            initialImageUrl={initialCoverUrl}
+            initialImageName={`series-${seriesId}-detail-cover.png`}
             onChange={(file) => {
               setCover(file);
               if (file) setError(null);
