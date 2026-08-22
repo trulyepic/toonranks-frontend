@@ -2,7 +2,7 @@ export const stripMdHeading = (s: string) =>
   s.replace(/^\s{0,3}#{1,6}\s+/, "").trim();
 
 /**
- * Converts forum markdown to a plain-text string suitable for previews.
+ * Converts markdown to a plain-text string suitable for previews.
  * Handles the custom series-mention syntax used across the platform, as well
  * as standard markdown syntax (images, links, bold, italic, code, headings,
  * blockquotes).  The result is a single collapsed line ready for truncation.

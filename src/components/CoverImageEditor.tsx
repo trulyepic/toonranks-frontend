@@ -12,6 +12,8 @@ type Props = {
   outputHeight: number;
   maxSizeKB: number;
   required?: boolean;
+  initialImageUrl?: string | null;
+  initialImageName?: string;
   onChange: (file: File | null) => void;
   onPendingChange?: (pending: boolean) => void;
 };
@@ -21,6 +23,7 @@ type SourceImage = {
   url: string;
   width: number;
   height: number;
+  isExisting?: boolean;
 };
 
 type EditedImage = {
@@ -85,15 +88,47 @@ function canvasToBlob(
   quality?: number
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error("Could not export the edited image."));
-      },
-      type,
-      quality
-    );
+    try {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Could not export the edited image."));
+        },
+        type,
+        quality
+      );
+    } catch {
+      reject(
+        new Error(
+          "This existing image cannot be edited in the browser. Choose a new image to replace it."
+        )
+      );
+    }
   });
+}
+
+function filenameFromUrl(url: string, fallback: string) {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    const lastSegment = parsed.pathname.split("/").filter(Boolean).pop();
+    return lastSegment ? decodeURIComponent(lastSegment) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function extensionForType(type: string) {
+  if (type === "image/png") return "png";
+  if (type === "image/webp") return "webp";
+  if (type === "image/jpeg") return "jpg";
+  return "png";
+}
+
+function fileFromCanvasImage(
+  name: string,
+  type = "image/png"
+) {
+  return new File([], name, { type });
 }
 
 async function exportedCanvasFile(
@@ -162,6 +197,8 @@ export default function CoverImageEditor({
   outputHeight,
   maxSizeKB,
   required = false,
+  initialImageUrl,
+  initialImageName,
   onChange,
   onPendingChange,
 }: Props) {
@@ -216,6 +253,124 @@ export default function CoverImageEditor({
     };
   }, [source?.url]);
 
+  useEffect(() => {
+    if (!initialImageUrl) return;
+
+    let cancelled = false;
+    const fallbackName =
+      initialImageName ||
+      filenameFromUrl(initialImageUrl, `${outputSuffix}-current-cover.png`);
+
+    const loadImage = (
+      url: string,
+      file: File,
+      revokeUrlOnError = false,
+      useCors = true
+    ) => {
+      const image = new Image();
+      if (useCors) image.crossOrigin = "anonymous";
+      image.onload = () => {
+        if (cancelled) {
+          if (revokeUrlOnError) URL.revokeObjectURL(url);
+          return;
+        }
+        imageRef.current = image;
+        setSource((prev) => {
+          if (prev?.url && prev.url !== url) URL.revokeObjectURL(prev.url);
+          return {
+            file,
+            url,
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+            isExisting: true,
+          };
+        });
+        setEditedImage({
+          fileName: file.name,
+          width: outputWidth,
+          height: outputHeight,
+          sizeKB: Math.max(1, Math.ceil(file.size / 1024)),
+          format: file.type === "image/png" ? "PNG" : file.type === "image/webp" ? "WebP" : "JPG",
+        });
+        setEditorEnabled(true);
+        setZoom(1);
+        setOffsetX(0);
+        setOffsetY(0);
+        setRotation(0);
+        setError(null);
+        lastExportKeyRef.current = [
+          url,
+          outputWidth,
+          outputHeight,
+          1,
+          0,
+          0,
+          0,
+        ].join("|");
+        exportingKeyRef.current = null;
+        onChangeRef.current(null);
+        onPendingChangeRef.current?.(false);
+        requestAnimationFrame(() => {
+          if (!previewCanvasRef.current) return;
+          drawCoverCrop(
+            previewCanvasRef.current,
+            image,
+            outputWidth,
+            outputHeight,
+            1,
+            0,
+            0,
+            0
+          );
+        });
+      };
+      image.onerror = () => {
+        if (revokeUrlOnError) URL.revokeObjectURL(url);
+        if (useCors && url === initialImageUrl) {
+          loadImage(url, file, false, false);
+          return;
+        }
+        if (!cancelled) {
+          setError("Could not load the current cover. Choose a new image to replace it.");
+          onPendingChangeRef.current?.(false);
+        }
+      };
+      image.src = url;
+    };
+
+    const loadExistingImage = async () => {
+      try {
+        const response = await fetch(initialImageUrl, { mode: "cors" });
+        if (!response.ok) throw new Error("Image request failed.");
+        const blob = await response.blob();
+        if (!blob.type.startsWith("image/")) throw new Error("Current cover is not an image.");
+        if (cancelled) return;
+        const extension = extensionForType(blob.type);
+        const baseName = fallbackName.replace(/\.[^.]+$/, "");
+        const file = new File([blob], `${baseName || "current-cover"}.${extension}`, {
+          type: blob.type,
+        });
+        const objectUrl = URL.createObjectURL(file);
+        loadImage(objectUrl, file, true);
+      } catch {
+        if (cancelled) return;
+        loadImage(initialImageUrl, fileFromCanvasImage(fallbackName), false);
+      }
+    };
+
+    void loadExistingImage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    initialImageUrl,
+    initialImageName,
+    outputHeight,
+    outputSuffix,
+    outputWidth,
+  ]);
+
   const clearSource = () => {
     if (source?.url) URL.revokeObjectURL(source.url);
     setSource(null);
@@ -231,6 +386,10 @@ export default function CoverImageEditor({
     exportingKeyRef.current = null;
     onChangeRef.current(null);
     onPendingChangeRef.current?.(false);
+  };
+
+  const markCoverDirty = () => {
+    setSource((prev) => (prev?.isExisting ? { ...prev, isExisting: false } : prev));
   };
 
   const exportCurrentCover = useCallback(async (force = false) => {
@@ -420,7 +579,7 @@ export default function CoverImageEditor({
           <div className="space-y-4">
             <div className="rounded-xl bg-white p-3 text-xs text-slate-600 dark:bg-[#241d19] dark:text-stone-300">
               <p>
-                Source: {source.file.name} ({source.width}x{source.height})
+                Source: {source.isExisting ? "current cover" : source.file.name} ({source.width}x{source.height})
               </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 font-semibold text-emerald-800 dark:border-emerald-700/60 dark:bg-emerald-950/30 dark:text-emerald-200">
@@ -437,13 +596,15 @@ export default function CoverImageEditor({
                   }`}
                 >
                   {editedImage
-                    ? `Output file: ${editedImage.sizeKB}KB`
+                    ? source.isExisting && !processing
+                      ? `Current file: ${editedImage.sizeKB}KB`
+                      : `Output file: ${editedImage.sizeKB}KB`
                     : `Limit: < ${maxSizeKB}KB`}
                 </div>
               </div>
               {editedImage ? (
                 <p className="mt-3 font-semibold text-emerald-700 dark:text-emerald-300">
-                  Ready: {editedImage.fileName} ({editedImage.width}x
+                  {source.isExisting ? "Current cover ready" : "Ready"}: {editedImage.fileName} ({editedImage.width}x
                   {editedImage.height}, {editedImage.sizeKB}KB,{" "}
                   {editedImage.format})
                 </p>
@@ -474,6 +635,7 @@ export default function CoverImageEditor({
                 onChange={(event) => {
                   setRotation(Number(event.target.value));
                   if (editorEnabled) setEditedImage(null);
+                  markCoverDirty();
                   onChangeRef.current(null);
                   onPendingChangeRef.current?.(true);
                 }}
@@ -488,6 +650,7 @@ export default function CoverImageEditor({
                     onClick={() => {
                       setRotation(value);
                       if (editorEnabled) setEditedImage(null);
+                      markCoverDirty();
                       onChangeRef.current(null);
                       onPendingChangeRef.current?.(true);
                     }}
@@ -513,6 +676,7 @@ export default function CoverImageEditor({
                 onChange={(event) => {
                   setZoom(Number(event.target.value));
                   if (editorEnabled) setEditedImage(null);
+                  markCoverDirty();
                   onChangeRef.current(null);
                   onPendingChangeRef.current?.(true);
                 }}
@@ -534,6 +698,7 @@ export default function CoverImageEditor({
                 onChange={(event) => {
                   setOffsetX(Number(event.target.value));
                   if (editorEnabled) setEditedImage(null);
+                  markCoverDirty();
                   onChangeRef.current(null);
                   onPendingChangeRef.current?.(true);
                 }}
@@ -555,6 +720,7 @@ export default function CoverImageEditor({
                 onChange={(event) => {
                   setOffsetY(Number(event.target.value));
                   if (editorEnabled) setEditedImage(null);
+                  markCoverDirty();
                   onChangeRef.current(null);
                   onPendingChangeRef.current?.(true);
                 }}

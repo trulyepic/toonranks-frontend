@@ -100,7 +100,7 @@ export default function MySubmissionsPage() {
                 My submitted titles
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-                Finish the synopsis and detail cover for newly submitted titles, then wait for admin approval before they go live.
+                Finish the title details and detail cover for newly submitted titles, then wait for admin approval before they go live.
               </p>
             </div>
             <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:ring-[#475276]">
@@ -187,7 +187,7 @@ export default function MySubmissionsPage() {
                           {!isApproved
                             ? item.detail_ready
                               ? "Details are complete. This title is ready for admin review and approval."
-                              : "Open the title page to add the synopsis and secondary cover image before admin review."
+                              : "Open the title page to add title details and the secondary cover image before admin review."
                             : "This title is approved and now visible across the site."}
                         </p>
 
@@ -254,6 +254,7 @@ export default function MySubmissionsPage() {
             type: editItem.type,
             author: editItem.author,
             artist: editItem.artist,
+            cover_url: editItem.cover_url,
             status: editItem.status ?? null,
           }}
           onClose={() => setEditItem(null)}

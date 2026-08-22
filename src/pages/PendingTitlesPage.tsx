@@ -286,7 +286,7 @@ export default function PendingTitlesPage() {
                             </span>{" "}
                             {item.detail_ready
                               ? "Details complete"
-                              : "Waiting for synopsis and detail cover"}
+                              : "Waiting for title details and detail cover"}
                           </div>
                         </div>
 
