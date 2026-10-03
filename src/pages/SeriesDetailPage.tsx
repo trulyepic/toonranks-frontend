@@ -214,8 +214,7 @@ const SeriesDetailPage = () => {
   const hasExternalContext = Boolean(
     seriesDetail?.external_source &&
       (seriesDetail.external_score != null ||
-        seriesDetail.external_popularity != null ||
-        seriesDetail.external_url)
+        seriesDetail.external_popularity != null)
   );
   const canEditDetails = Boolean(user && isAdmin);
   const isPendingSubmission =
