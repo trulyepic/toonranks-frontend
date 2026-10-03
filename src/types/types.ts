@@ -16,6 +16,12 @@ export type SeriesDetailData = {
   cover_url?: string;
   approval_status?: string | null;
   submitted_by_id?: number | null;
+  external_source?: string | null;
+  external_id?: string | null;
+  external_url?: string | null;
+  external_score?: number | null;
+  external_popularity?: number | null;
+  external_synced_at?: string | null;
   synopsis: string;
   series_cover_url: string;
   author?: string;

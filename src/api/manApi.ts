@@ -525,6 +525,12 @@ export interface Series {
   artist?: string;
   status?: SeriesStatus;
   approval_status?: string | null;
+  external_source?: string | null;
+  external_id?: string | null;
+  external_url?: string | null;
+  external_score?: number | null;
+  external_popularity?: number | null;
+  external_synced_at?: string | null;
 }
 
 export interface SeriesPayload {
@@ -556,6 +562,12 @@ export interface RankedSeries {
   artist?: string;
   status?: SeriesStatus;
   approval_status?: string | null;
+  external_source?: string | null;
+  external_id?: string | null;
+  external_url?: string | null;
+  external_score?: number | null;
+  external_popularity?: number | null;
+  external_synced_at?: string | null;
 }
 
 export interface PendingSeries extends Series {
@@ -564,6 +576,52 @@ export interface PendingSeries extends Series {
   approved_by_id?: number | null;
   approved_at?: string | null;
   detail_ready?: boolean;
+}
+
+export interface ExternalTitleCandidate {
+  source: "ANILIST";
+  external_id: string;
+  external_url: string;
+  title: string;
+  type: SeriesType;
+  genre: string;
+  synopsis: string;
+  cover_url: string;
+  detail_cover_url: string;
+  author?: string;
+  artist?: string;
+  status?: SeriesStatus;
+  country_of_origin?: string | null;
+  popularity?: number | null;
+  average_score?: number | null;
+  title_aliases?: string[];
+}
+
+export interface ExternalImportResponse {
+  imported: boolean;
+  duplicate: boolean;
+  series: PendingSeries;
+}
+
+export type ExternalCatalogSort =
+  | "POPULARITY_DESC"
+  | "TRENDING_DESC"
+  | "SCORE_DESC"
+  | "START_DATE_DESC";
+
+export interface ExternalBatchImportRequest {
+  type: SeriesType;
+  sort: ExternalCatalogSort;
+  page: number;
+  page_size: number;
+  genre?: string;
+}
+
+export interface ExternalBatchImportResponse {
+  imported: number;
+  duplicates: number;
+  skipped: number;
+  items: ExternalImportResponse[];
 }
 
 // ---------- Reading List Types ----------
@@ -712,6 +770,59 @@ export const getMySubmittedSeries = async (): Promise<PendingSeries[]> => {
 
 export const approveSeries = async (seriesId: number): Promise<Series> => {
   const res = await api.post<Series>(`/series/${seriesId}/approve`);
+  return res.data;
+};
+
+export const searchExternalCatalog = async (
+  query: string,
+  options: { type?: SeriesType; page?: number; page_size?: number } = {}
+): Promise<ExternalTitleCandidate[]> => {
+  const res = await api.get<ExternalTitleCandidate[]>("/external-catalog/search", {
+    params: {
+      query,
+      ...(options.type ? { type: options.type } : {}),
+      ...(options.page ? { page: options.page } : {}),
+      ...(options.page_size ? { page_size: options.page_size } : {}),
+    },
+  });
+  return res.data;
+};
+
+export const importExternalTitle = async (
+  candidate: ExternalTitleCandidate
+): Promise<ExternalImportResponse> => {
+  const res = await api.post<ExternalImportResponse>(
+    "/external-catalog/import",
+    candidate
+  );
+  return res.data;
+};
+
+export const discoverExternalCatalog = async (
+  options: ExternalBatchImportRequest
+): Promise<ExternalTitleCandidate[]> => {
+  const res = await api.get<ExternalTitleCandidate[]>("/external-catalog/discover", {
+    params: {
+      type: options.type,
+      sort: options.sort,
+      page: options.page,
+      page_size: options.page_size,
+      ...(options.genre?.trim() ? { genre: options.genre.trim() } : {}),
+    },
+  });
+  return res.data;
+};
+
+export const importExternalBatch = async (
+  options: ExternalBatchImportRequest
+): Promise<ExternalBatchImportResponse> => {
+  const res = await api.post<ExternalBatchImportResponse>(
+    "/external-catalog/import-batch",
+    {
+      ...options,
+      genre: options.genre?.trim() || undefined,
+    }
+  );
   return res.data;
 };
 
