@@ -211,6 +211,12 @@ const SeriesDetailPage = () => {
   const hasExistingTitleDetails = Boolean(
     seriesDetail?.series_cover_url || seriesDetail?.synopsis?.trim()
   );
+  const hasExternalContext = Boolean(
+    seriesDetail?.external_source &&
+      (seriesDetail.external_score != null ||
+        seriesDetail.external_popularity != null ||
+        seriesDetail.external_url)
+  );
   const canEditDetails = Boolean(user && isAdmin);
   const isPendingSubmission =
     String(
@@ -468,6 +474,54 @@ const SeriesDetailPage = () => {
                         </div>
                       ) : null}
                     </div>
+
+                    {hasExternalContext ? (
+                      <div className="mt-3 rounded-[24px] border border-blue-100 bg-blue-50/80 px-5 py-4 shadow-[0_16px_32px_-28px_rgba(37,99,235,0.65)] dark:border-[#30405f] dark:bg-[linear-gradient(145deg,_rgba(24,34,58,0.82),_rgba(18,25,42,0.82))]">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">
+                              External context
+                            </p>
+                            {seriesDetail.external_url ? (
+                              <a
+                                href={seriesDetail.external_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-3 inline-flex text-xs font-semibold text-blue-700 hover:underline dark:text-blue-300"
+                              >
+                                Source: {seriesDetail.external_source}
+                              </a>
+                            ) : (
+                              <p className="mt-3 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                                Source: {seriesDetail.external_source}
+                              </p>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-6 sm:min-w-[340px]">
+                            {seriesDetail.external_score != null ? (
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                                  AniList score
+                                </p>
+                                <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">
+                                  {seriesDetail.external_score}%
+                                </p>
+                              </div>
+                            ) : null}
+                            {seriesDetail.external_popularity != null ? (
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                                  Popularity
+                                </p>
+                                <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">
+                                  {seriesDetail.external_popularity.toLocaleString()}
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="w-full max-w-[220px] shrink-0">
