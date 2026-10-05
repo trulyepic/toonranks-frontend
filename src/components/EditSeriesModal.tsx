@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { editSeries, type Series, type SeriesType } from "../api/manApi";
+import {
+  editSeries,
+  fetchSeriesEditorImage,
+  type Series,
+  type SeriesType,
+} from "../api/manApi";
 import CoverImageEditor from "./CoverImageEditor";
 
 const TITLE_COVER_WIDTH = 600;
@@ -40,6 +45,10 @@ const EditSeriesModal = ({ id, initialData, onClose, onSuccess }: Props) => {
   const [coverPending, setCoverPending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadCurrentCover = useCallback(
+    () => fetchSeriesEditorImage(id, "series"),
+    [id]
+  );
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -173,6 +182,7 @@ const EditSeriesModal = ({ id, initialData, onClose, onSuccess }: Props) => {
             maxSizeKB={TITLE_COVER_MAX_SIZE_KB}
             initialImageUrl={initialData.cover_url}
             initialImageName={`${initialData.title}-cover.png`}
+            loadInitialImage={loadCurrentCover}
             onChange={(file) => {
               setCover(file);
               if (file) setError(null);
