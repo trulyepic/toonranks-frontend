@@ -14,6 +14,7 @@ type Props = {
   required?: boolean;
   initialImageUrl?: string | null;
   initialImageName?: string;
+  loadInitialImage?: () => Promise<Blob>;
   onChange: (file: File | null) => void;
   onPendingChange?: (pending: boolean) => void;
 };
@@ -199,6 +200,7 @@ export default function CoverImageEditor({
   required = false,
   initialImageUrl,
   initialImageName,
+  loadInitialImage,
   onChange,
   onPendingChange,
 }: Props) {
@@ -287,8 +289,8 @@ export default function CoverImageEditor({
         });
         setEditedImage({
           fileName: file.name,
-          width: outputWidth,
-          height: outputHeight,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
           sizeKB: Math.max(1, Math.ceil(file.size / 1024)),
           format: file.type === "image/png" ? "PNG" : file.type === "image/webp" ? "WebP" : "JPG",
         });
@@ -340,9 +342,14 @@ export default function CoverImageEditor({
 
     const loadExistingImage = async () => {
       try {
-        const response = await fetch(initialImageUrl, { mode: "cors" });
-        if (!response.ok) throw new Error("Image request failed.");
-        const blob = await response.blob();
+        let blob: Blob;
+        if (loadInitialImage) {
+          blob = await loadInitialImage();
+        } else {
+          const response = await fetch(initialImageUrl, { mode: "cors" });
+          if (!response.ok) throw new Error("Image request failed.");
+          blob = await response.blob();
+        }
         if (!blob.type.startsWith("image/")) throw new Error("Current cover is not an image.");
         if (cancelled) return;
         const extension = extensionForType(blob.type);
@@ -354,6 +361,13 @@ export default function CoverImageEditor({
         loadImage(objectUrl, file, true);
       } catch {
         if (cancelled) return;
+        if (loadInitialImage) {
+          setError(
+            "Could not prepare the current cover for editing. You can keep it as-is or choose a new image."
+          );
+          onPendingChangeRef.current?.(false);
+          return;
+        }
         loadImage(initialImageUrl, fileFromCanvasImage(fallbackName), false);
       }
     };
@@ -366,6 +380,7 @@ export default function CoverImageEditor({
   }, [
     initialImageUrl,
     initialImageName,
+    loadInitialImage,
     outputHeight,
     outputSuffix,
     outputWidth,
@@ -604,7 +619,7 @@ export default function CoverImageEditor({
               </div>
               {editedImage ? (
                 <p className="mt-3 font-semibold text-emerald-700 dark:text-emerald-300">
-                  {source.isExisting ? "Current cover ready" : "Ready"}: {editedImage.fileName} ({editedImage.width}x
+                  {source.isExisting ? "Keeping current cover as-is" : "Ready"}: {editedImage.fileName} ({editedImage.width}x
                   {editedImage.height}, {editedImage.sizeKB}KB,{" "}
                   {editedImage.format})
                 </p>
@@ -619,6 +634,11 @@ export default function CoverImageEditor({
                   Click the button below to make this image meet the cover requirements.
                 </p>
               )}
+              {source.isExisting ? (
+                <p className="mt-2 leading-5 text-slate-500 dark:text-stone-400">
+                  Save without changing the controls to keep this image as-is. Adjust any control to upload an edited copy at the required size.
+                </p>
+              ) : null}
             </div>
 
             <div>

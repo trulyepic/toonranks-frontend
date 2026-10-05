@@ -864,6 +864,19 @@ export const editSeries = async (
   return res.data;
 };
 
+export type SeriesEditorImageKind = "series" | "detail";
+
+export const fetchSeriesEditorImage = async (
+  id: number,
+  kind: SeriesEditorImageKind
+): Promise<Blob> => {
+  const res = await api.get<Blob>(`/series/${id}/editor-image`, {
+    params: { kind },
+    responseType: "blob",
+  });
+  return res.data;
+};
+
 // ---------- Auth ----------
 export const login = async (credentials: {
   username: string;
