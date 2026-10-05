@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { createSeriesDetail } from "../api/manApi";
+import { useCallback, useState } from "react";
+import { createSeriesDetail, fetchSeriesEditorImage } from "../api/manApi";
 import { useUser } from "../login/useUser";
 import { isAdminRole } from "../util/roleUtils";
 import CoverImageEditor from "./CoverImageEditor";
@@ -29,6 +29,10 @@ const AddSeriesDetailModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMode, setSavedMode] = useState<"created" | "review" | null>(null);
+  const loadCurrentCover = useCallback(
+    () => fetchSeriesEditorImage(seriesId, "detail"),
+    [seriesId]
+  );
   const canSaveDetails =
     Boolean(synopsis.trim() && (hasExistingDetails || cover)) &&
     !coverPending &&
@@ -170,6 +174,7 @@ const AddSeriesDetailModal = ({
             required={!hasExistingDetails}
             initialImageUrl={initialCoverUrl}
             initialImageName={`series-${seriesId}-detail-cover.png`}
+            loadInitialImage={initialCoverUrl ? loadCurrentCover : undefined}
             onChange={(file) => {
               setCover(file);
               if (file) setError(null);
