@@ -33,6 +33,12 @@ type RatingLabel =
   | "Art"
   | "Drama / Fighting";
 
+type ComparisonRow = {
+  label: string;
+  values: string[];
+  compareValues?: (string | number | null | undefined)[];
+};
+
 const ratingLabels: RatingLabel[] = [
   "Story",
   "Characters",
@@ -70,7 +76,7 @@ function statusClass(status?: string) {
 
 function compareText(
   a: string | number | null | undefined,
-  b: string | number | null | undefined
+  b: string | number | null | undefined,
 ) {
   if (a == null && b == null) return "Tie";
   if (a == null) return "Series 2";
@@ -96,6 +102,13 @@ function formatCategoryScore(detail: SeriesDetailData, label: RatingLabel) {
 function formatScore(score?: number | null) {
   if (score == null || Number.isNaN(score)) return "-";
   return Number(score).toFixed(1);
+}
+
+function hasAniListMetrics(detail?: SeriesDetailData) {
+  return (
+    detail?.external_source?.toUpperCase() === "ANILIST" &&
+    (detail.external_score != null || detail.external_popularity != null)
+  );
 }
 
 function ComparisonLoading() {
@@ -163,7 +176,7 @@ function ComparePage() {
       setError(null);
       try {
         const results = await Promise.all(
-          items.map((item) => getSeriesDetailById(item.id))
+          items.map((item) => getSeriesDetailById(item.id)),
         );
         if (!ignore) setDetails(results);
       } catch {
@@ -187,11 +200,13 @@ function ComparePage() {
     comparedCount <= 2 ? 0 : comparedCount === 3 ? 720 : 920;
   const displayTotalVotes = useMemo(
     () =>
-      items.map((item) => getDisplayVoteCount(item.vote_count, item.id) ?? null),
-    [items]
+      items.map(
+        (item) => getDisplayVoteCount(item.vote_count, item.id) ?? null,
+      ),
+    [items],
   );
 
-  const comparisonRows = useMemo(() => {
+  const comparisonRows = useMemo<ComparisonRow[]>(() => {
     if (details.length !== items.length || !items.length) return [];
 
     const baseRows = [
@@ -205,11 +220,15 @@ function ComparePage() {
       },
       {
         label: "Author",
-        values: details.map((detail, index) => detail.author || items[index]?.author || "-"),
+        values: details.map(
+          (detail, index) => detail.author || items[index]?.author || "-",
+        ),
       },
       {
         label: "Artist",
-        values: details.map((detail, index) => detail.artist || items[index]?.artist || "-"),
+        values: details.map(
+          (detail, index) => detail.artist || items[index]?.artist || "-",
+        ),
       },
       {
         label: "Overall rating",
@@ -218,23 +237,58 @@ function ComparePage() {
       {
         label: "Total votes",
         values: displayTotalVotes.map((count) =>
-          count != null ? String(count) : "-"
+          count != null ? String(count) : "-",
         ),
       },
     ];
+
+    const anilistScores = details.map((detail) =>
+      detail.external_source?.toUpperCase() === "ANILIST"
+        ? detail.external_score
+        : null,
+    );
+    const anilistPopularity = details.map((detail) =>
+      detail.external_source?.toUpperCase() === "ANILIST"
+        ? detail.external_popularity
+        : null,
+    );
+    const externalRows: ComparisonRow[] = [];
+
+    if (anilistScores.some((score) => score != null)) {
+      externalRows.push({
+        label: "AniList score",
+        values: anilistScores.map((score) =>
+          score != null ? `${score}%` : "-",
+        ),
+        compareValues: anilistScores,
+      });
+    }
+
+    if (anilistPopularity.some((popularity) => popularity != null)) {
+      externalRows.push({
+        label: "AniList popularity",
+        values: anilistPopularity.map((popularity) =>
+          popularity != null ? popularity.toLocaleString() : "-",
+        ),
+        compareValues: anilistPopularity,
+      });
+    }
 
     const categoryRows = ratingLabels.map((label) => ({
       label,
       values: details.map((detail, index) => {
         const score = formatCategoryScore(detail, label);
-        const counts = getDisplayVoteCounts(detail.vote_counts || {}, items[index].id);
+        const counts = getDisplayVoteCounts(
+          detail.vote_counts || {},
+          items[index].id,
+        );
         const voteCount = counts[label];
         if (score == null) return "-";
         return `${score.toFixed(1)}/10${voteCount ? `  ${voteCount} votes` : ""}`;
       }),
     }));
 
-    return [...baseRows, ...categoryRows];
+    return [...baseRows, ...externalRows, ...categoryRows];
   }, [details, displayTotalVotes, items]);
 
   const matrixHeaderStyle =
@@ -246,7 +300,7 @@ function ComparePage() {
       : undefined;
 
   const matrixValueClass = (label: string) =>
-    label === "Overall rating"
+    label === "Overall rating" || label.startsWith("AniList")
       ? "text-sm leading-6 font-semibold text-blue-600 dark:text-blue-300"
       : "text-sm leading-6 text-slate-700 dark:text-stone-200";
 
@@ -270,7 +324,8 @@ function ComparePage() {
 
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-200 dark-theme-chip dark:text-slate-300">
-              {comparedCount} {comparedCount === 1 ? "title" : "titles"} selected
+              {comparedCount} {comparedCount === 1 ? "title" : "titles"}{" "}
+              selected
             </span>
             <Link
               to="/"
@@ -289,7 +344,9 @@ function ComparePage() {
       ) : (
         <>
           {error ? (
-            <section className={`${shellCardClass} mt-6 px-5 py-5 text-sm text-red-700 dark:text-red-300`}>
+            <section
+              className={`${shellCardClass} mt-6 px-5 py-5 text-sm text-red-700 dark:text-red-300`}
+            >
               {error}
             </section>
           ) : null}
@@ -327,6 +384,7 @@ function ComparePage() {
                 >
                   {items.map((item, index) => {
                     const detail = details[index];
+                    const showAniListMetrics = hasAniListMetrics(detail);
                     const displayCounts = detail
                       ? getDisplayVoteCounts(detail.vote_counts || {}, item.id)
                       : {};
@@ -362,12 +420,14 @@ function ComparePage() {
 
                             <div className="absolute left-3 top-3 flex flex-wrap items-center gap-2">
                               <span className="rounded-full bg-black/75 px-2.5 py-1 text-xs font-semibold text-white ring-1 ring-white/70">
-                                {typeof item.rank === "number" ? `#${item.rank}` : "#-"}
+                                {typeof item.rank === "number"
+                                  ? `#${item.rank}`
+                                  : "#-"}
                               </span>
                               {item.status ? (
                                 <span
                                   className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] shadow-sm ${statusClass(
-                                    item.status
+                                    item.status,
                                   )}`}
                                 >
                                   {item.status.replace("_", " ")}
@@ -431,6 +491,52 @@ function ComparePage() {
                             </div>
                           </div>
 
+                          {showAniListMetrics ? (
+                            <div className="rounded-[22px] border border-blue-100 bg-blue-50/80 px-4 py-3.5 shadow-[0_16px_32px_-28px_rgba(37,99,235,0.65)] dark:border-[#30405f] dark:bg-[linear-gradient(145deg,_rgba(24,34,58,0.82),_rgba(18,25,42,0.82))]">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">
+                                  External context
+                                </p>
+                                {detail?.external_url ? (
+                                  <a
+                                    href={detail.external_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[11px] font-semibold text-blue-700 hover:underline dark:text-blue-300"
+                                  >
+                                    Source: AniList
+                                  </a>
+                                ) : (
+                                  <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                                    Source: AniList
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-3 grid grid-cols-2 gap-3">
+                                {detail?.external_score != null ? (
+                                  <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                                      AniList score
+                                    </p>
+                                    <p className="mt-1 text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                                      {detail.external_score}%
+                                    </p>
+                                  </div>
+                                ) : null}
+                                {detail?.external_popularity != null ? (
+                                  <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                                      Popularity
+                                    </p>
+                                    <p className="mt-1 text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
+                                      {detail.external_popularity.toLocaleString()}
+                                    </p>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : null}
+
                           <div className="grid gap-2.5">
                             {ratingLabels.map((label) => {
                               const score = detail
@@ -448,7 +554,9 @@ function ComparePage() {
                                         {label}
                                       </p>
                                       <p className="mt-1 text-xl font-semibold tracking-tight text-slate-950 dark:text-white">
-                                        {score == null ? "-" : `${score.toFixed(1)}/10`}
+                                        {score == null
+                                          ? "-"
+                                          : `${score.toFixed(1)}/10`}
                                       </p>
                                     </div>
                                     {voteCount !== undefined ? (
@@ -489,11 +597,13 @@ function ComparePage() {
                   </div>
                   {isHeadToHead ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Two-series view makes it easier to spot the edge in each category.
+                      Two-series view makes it easier to spot the edge in each
+                      category.
                     </p>
                   ) : (
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Scroll across on smaller screens to compare every column cleanly.
+                      Scroll across on smaller screens to compare every column
+                      cleanly.
                     </p>
                   )}
                 </div>
@@ -524,15 +634,20 @@ function ComparePage() {
 
                   {comparisonRows.map((row) => (
                     <Fragment key={row.label}>
-                      <div
-                        className="border-b border-r border-slate-200/80 bg-white px-5 py-4 dark:border-[#342a23] dark-theme-card-soft"
-                      >
+                      <div className="border-b border-r border-slate-200/80 bg-white px-5 py-4 dark:border-[#342a23] dark-theme-card-soft">
                         <p className="text-sm font-semibold text-slate-700 dark:text-stone-200">
                           {row.label}
                         </p>
                         {isHeadToHead ? (
                           <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
-                            {compareText(row.values[0], row.values[1])}
+                            {compareText(
+                              row.compareValues
+                                ? row.compareValues[0]
+                                : row.values[0],
+                              row.compareValues
+                                ? row.compareValues[1]
+                                : row.values[1],
+                            )}
                           </p>
                         ) : null}
                       </div>
@@ -541,9 +656,7 @@ function ComparePage() {
                           key={`${row.label}-${items[index].id}`}
                           className="border-b border-slate-200/80 bg-white px-5 py-4 dark:border-[#342a23] dark-theme-card"
                         >
-                          <p className={matrixValueClass(row.label)}>
-                            {value}
-                          </p>
+                          <p className={matrixValueClass(row.label)}>{value}</p>
                         </div>
                       ))}
                     </Fragment>
