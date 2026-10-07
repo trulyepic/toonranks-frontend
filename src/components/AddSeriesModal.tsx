@@ -6,6 +6,9 @@ import type { Series, SeriesPayload } from "../api/manApi";
 import { useUser } from "../login/useUser";
 import { isAdminRole } from "../util/roleUtils";
 import CoverImageEditor from "./CoverImageEditor";
+import WhereToReadEditor from "./WhereToReadEditor";
+import type { ReadingLink } from "../types/types";
+import { cleanWhereToRead, whereToReadError } from "../util/whereToRead";
 
 interface Props {
   onClose: () => void;
@@ -26,6 +29,7 @@ const AddSeriesModal = ({ onClose }: Props) => {
   const isAdmin = isAdminRole(user?.role);
   const [form, setForm] = useState<Partial<SeriesPayload>>({});
   const [cover, setCover] = useState<File | null>(null);
+  const [readingLinks, setReadingLinks] = useState<ReadingLink[]>([]);
   const [coverPending, setCoverPending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +52,19 @@ const AddSeriesModal = ({ onClose }: Props) => {
       setError("Finish the cover image before creating the title.");
       return;
     }
+    const linksError = whereToReadError(readingLinks);
+    if (linksError) {
+      setError(linksError);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      const created = await createSeries({ ...form, cover } as SeriesPayload);
+      const created = await createSeries({
+        ...form,
+        cover,
+        where_to_read: cleanWhereToRead(readingLinks),
+      } as SeriesPayload);
       setSubmittedSeries(created);
     } catch (err) {
       setError("Error adding series.");
@@ -228,6 +241,11 @@ const AddSeriesModal = ({ onClose }: Props) => {
             }}
             onPendingChange={setCoverPending}
           />
+
+          <WhereToReadEditor links={readingLinks} onChange={setReadingLinks} />
+          <p className="text-xs text-slate-500 dark:text-stone-400">
+            Leave this empty to fill it automatically from AniList when the title is found there.
+          </p>
         </div>
 
         <div className="mt-6 flex justify-end gap-3">

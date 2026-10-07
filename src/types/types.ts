@@ -7,6 +7,11 @@ export interface AvatarFields {
   avatar_preset?: AvatarPreset | null;
 }
 
+export interface ReadingLink {
+  site: string;
+  url: string;
+}
+
 export type SeriesDetailData = {
   id?: number;
   series_id?: number;
@@ -22,6 +27,7 @@ export type SeriesDetailData = {
   external_score?: number | null;
   external_popularity?: number | null;
   external_synced_at?: string | null;
+  where_to_read?: ReadingLink[];
   synopsis: string;
   series_cover_url: string;
   author?: string;

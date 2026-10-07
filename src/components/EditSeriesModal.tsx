@@ -1,12 +1,16 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   editSeries,
   fetchSeriesEditorImage,
+  getSeriesDetailById,
   type Series,
   type SeriesType,
 } from "../api/manApi";
+import type { ReadingLink } from "../types/types";
+import { cleanWhereToRead, whereToReadError } from "../util/whereToRead";
 import CoverImageEditor from "./CoverImageEditor";
+import WhereToReadEditor from "./WhereToReadEditor";
 
 const TITLE_COVER_WIDTH = 600;
 const TITLE_COVER_HEIGHT = 900;
@@ -45,6 +49,28 @@ const EditSeriesModal = ({ id, initialData, onClose, onSuccess }: Props) => {
   const [coverPending, setCoverPending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [readingLinks, setReadingLinks] = useState<ReadingLink[]>([]);
+  // Only send links once the current ones are loaded, so a failed load can't wipe them.
+  const [linksState, setLinksState] = useState<"loading" | "ready" | "unavailable">(
+    "loading"
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    getSeriesDetailById(id)
+      .then((detail) => {
+        if (cancelled) return;
+        setReadingLinks(detail.where_to_read ?? []);
+        setLinksState("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setLinksState("unavailable");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
   const loadCurrentCover = useCallback(
     () => fetchSeriesEditorImage(id, "series"),
     [id]
@@ -65,6 +91,11 @@ const EditSeriesModal = ({ id, initialData, onClose, onSuccess }: Props) => {
       setError("Finish the cover image before saving.");
       return;
     }
+    const linksError = linksState === "ready" ? whereToReadError(readingLinks) : null;
+    if (linksError) {
+      setError(linksError);
+      return;
+    }
 
     try {
       setError(null);
@@ -72,6 +103,9 @@ const EditSeriesModal = ({ id, initialData, onClose, onSuccess }: Props) => {
       const updated = await editSeries(id, {
         ...form,
         ...(cover ? { cover } : {}),
+        ...(linksState === "ready"
+          ? { where_to_read: cleanWhereToRead(readingLinks) }
+          : {}),
       });
       onSuccess(updated);
       onClose();
@@ -82,7 +116,11 @@ const EditSeriesModal = ({ id, initialData, onClose, onSuccess }: Props) => {
       setLoading(false);
     }
   };
-  const canSave = Boolean(form.title && form.genre && form.type) && !coverPending && !loading;
+  const canSave =
+    Boolean(form.title && form.genre && form.type) &&
+    !coverPending &&
+    !loading &&
+    linksState !== "loading";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
@@ -189,6 +227,18 @@ const EditSeriesModal = ({ id, initialData, onClose, onSuccess }: Props) => {
             }}
             onPendingChange={setCoverPending}
           />
+
+          {linksState === "unavailable" ? (
+            <p className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-[#3a3028] dark:text-stone-400">
+              Where to read links can be edited once this title has its details added.
+            </p>
+          ) : (
+            <WhereToReadEditor
+              links={readingLinks}
+              onChange={setReadingLinks}
+              disabled={linksState === "loading"}
+            />
+          )}
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <button
