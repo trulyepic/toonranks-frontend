@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Clock3 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   getMySubmittedSeries,
@@ -10,6 +11,7 @@ import { canSubmitSeriesUser } from "../util/roleUtils";
 import EditSeriesModal from "../components/EditSeriesModal";
 import { NoIndexSeo } from "../components/Seo";
 import { SITE_NAME } from "../config/site";
+import { formatSubmissionAge } from "../util/submissionAge";
 
 function statusLabel(status?: string | null) {
   if (!status) return "Pending review";
@@ -130,6 +132,9 @@ export default function MySubmissionsPage() {
               {items.map((item) => {
                 const isApproved =
                   String(item.approval_status || "").toUpperCase() === "APPROVED";
+                const approvalAge = isApproved
+                  ? formatSubmissionAge(item.approved_at)
+                  : null;
 
                 return (
                   <article
@@ -183,6 +188,13 @@ export default function MySubmissionsPage() {
                         <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                           {item.genre}
                         </p>
+
+                        {approvalAge && (
+                          <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                            <Clock3 aria-hidden="true" className="h-3.5 w-3.5" />
+                            {approvalAge}
+                          </p>
+                        )}
 
                         <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
                           {!isApproved
