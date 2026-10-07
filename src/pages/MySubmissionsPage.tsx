@@ -100,7 +100,8 @@ export default function MySubmissionsPage() {
                 My submitted titles
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-                Finish the title details and detail cover for newly submitted titles, then wait for admin approval before they go live.
+                Finish newly submitted titles before review. Approved titles remain
+                here for 30 days and continue to stay live after leaving this list.
               </p>
             </div>
             <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 ring-1 ring-inset ring-blue-100 dark:bg-[linear-gradient(145deg,_rgba(34,47,83,0.82),_rgba(24,31,55,0.82))] dark:text-blue-200 dark:ring-[#475276]">
