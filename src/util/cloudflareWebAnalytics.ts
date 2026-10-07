@@ -1,4 +1,3 @@
-const CLOUDFLARE_ANALYTICS_TOKEN = "006be16347d84237b8504d9ac482a047";
 const CLOUDFLARE_BEACON_URL =
   "https://static.cloudflareinsights.com/beacon.min.js";
 
@@ -8,9 +7,13 @@ export function shouldEnableCloudflareAnalytics(hostname: string): boolean {
 
 export function installCloudflareWebAnalytics(
   targetDocument: Document,
-  hostname: string
+  hostname: string,
+  token: string | undefined
 ): (() => void) | undefined {
-  if (!shouldEnableCloudflareAnalytics(hostname)) return undefined;
+  const normalizedToken = token?.trim();
+  if (!shouldEnableCloudflareAnalytics(hostname) || !normalizedToken) {
+    return undefined;
+  }
 
   const existing = targetDocument.querySelector(
     'script[src*="static.cloudflareinsights.com"], script[data-cf-beacon]'
@@ -21,7 +24,7 @@ export function installCloudflareWebAnalytics(
   script.defer = true;
   script.src = CLOUDFLARE_BEACON_URL;
   script.dataset.cfBeacon = JSON.stringify({
-    token: CLOUDFLARE_ANALYTICS_TOKEN,
+    token: normalizedToken,
   });
   targetDocument.body.appendChild(script);
 

@@ -17,11 +17,15 @@ describe("Cloudflare Web Analytics", () => {
   });
 
   it("installs one production beacon and cleans it up", () => {
-    const cleanup = installCloudflareWebAnalytics(document, "www.toonranks.com");
+    const cleanup = installCloudflareWebAnalytics(
+      document,
+      "www.toonranks.com",
+      "test-token"
+    );
     const beacon = document.querySelector<HTMLScriptElement>("script[data-cf-beacon]");
 
     expect(beacon?.src).toBe("https://static.cloudflareinsights.com/beacon.min.js");
-    expect(beacon?.dataset.cfBeacon).toContain("006be16347d84237b8504d9ac482a047");
+    expect(beacon?.dataset.cfBeacon).toContain("test-token");
 
     cleanup?.();
     expect(document.querySelector("script[data-cf-beacon]")).toBeNull();
@@ -32,8 +36,14 @@ describe("Cloudflare Web Analytics", () => {
     existing.dataset.cfBeacon = '{"token":"existing"}';
     document.body.appendChild(existing);
 
-    installCloudflareWebAnalytics(document, "www.toonranks.com");
+    installCloudflareWebAnalytics(document, "www.toonranks.com", "test-token");
 
     expect(document.querySelectorAll("script[data-cf-beacon]")).toHaveLength(1);
+  });
+
+  it("does not install a beacon without a configured token", () => {
+    installCloudflareWebAnalytics(document, "www.toonranks.com", undefined);
+
+    expect(document.querySelector("script[data-cf-beacon]")).toBeNull();
   });
 });

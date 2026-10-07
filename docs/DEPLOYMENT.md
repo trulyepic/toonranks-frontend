@@ -17,7 +17,8 @@ the React Router v7 SSR build), with DNS via **Cloudflare**.
   `npm run start` (`react-router-serve ./build/server/index.js`). Railway injects
   `PORT`; the server listens on it.
 - Build-time env vars on the service: `VITE_APP_BASE_URL=https://api.toonranks.com`,
-  `VITE_GOOGLE_CLIENT_ID`, `VITE_RECAPTCHA_SITE_KEY` (baked into the client bundle).
+  `VITE_GOOGLE_CLIENT_ID`, `VITE_RECAPTCHA_SITE_KEY`, and
+  `VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN` (baked into the client bundle).
 - **Auto-deploys on push** to the service's configured branch.
 
 ## Domains
@@ -44,6 +45,9 @@ backend (resource routes in `src/sitemap/` — these replaced the old Amplify re
 The frontend installs the Cloudflare Web Analytics beacon only on
 `www.toonranks.com`; UAT and localhost are excluded. The loader also detects an
 automatically injected Cloudflare beacon so a deployment cannot double-count traffic.
+Set `VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN` on the Railway frontend service to the
+site token shown in Cloudflare Web Analytics. It is a public browser identifier,
+not a privileged API credential.
 
 After deploying this code, set the Cloudflare Web Analytics site from automatic
 setup to **Enable with JS Snippet installation**. The application then owns beacon
