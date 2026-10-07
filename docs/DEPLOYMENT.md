@@ -17,7 +17,8 @@ the React Router v7 SSR build), with DNS via **Cloudflare**.
   `npm run start` (`react-router-serve ./build/server/index.js`). Railway injects
   `PORT`; the server listens on it.
 - Build-time env vars on the service: `VITE_APP_BASE_URL=https://api.toonranks.com`,
-  `VITE_GOOGLE_CLIENT_ID`, `VITE_RECAPTCHA_SITE_KEY` (baked into the client bundle).
+  `VITE_GOOGLE_CLIENT_ID`, `VITE_RECAPTCHA_SITE_KEY`, and
+  `VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN` (baked into the client bundle).
 - **Auto-deploys on push** to the service's configured branch.
 
 ## Domains
@@ -27,19 +28,30 @@ same deploy — there is no separate UAT build right now):
 
 | URL | Cloudflare record | Notes |
 | --- | --- | --- |
-| `www.toonranks.com` | CNAME → Railway target, **DNS only (grey)** | production |
-| `uat.toonranks.com` | CNAME → Railway target, **DNS only (grey)** | staging/testing |
+| `www.toonranks.com` | CNAME → Railway target, **Proxied (orange)** | production |
+| `uat.toonranks.com` | CNAME → Railway target, **Proxied (orange)** | staging/testing |
 | `toonranks.com` (bare) | Cloudflare 301 → `www` | redirect rule |
+| `api.toonranks.com` | CNAME → Railway target, **DNS only (grey)** | shared API |
 
 Sitemap/robots and the backend (`api.toonranks.com`) are unchanged. The frontend
 serves `/sitemap.xml`, `/sitemap-static.xml`, `/sitemaps/*` by proxying them to the
 backend (resource routes in `src/sitemap/` — these replaced the old Amplify rewrites).
 
-> **Cloudflare proxy:** records are currently "DNS only" (grey cloud) so Railway issues
-> its TLS cert directly. To put Cloudflare's proxy (orange) back in front for
-> DDoS/WAF: flip to orange **and** set Cloudflare SSL/TLS to **Full (strict)**, **and**
-> add a cache rule that does NOT cache HTML (the app is server-rendered — caching HTML
-> would serve stale pages).
+> **Cloudflare proxy:** frontend records are proxied with SSL/TLS set to Full (strict).
+> Server-rendered HTML must remain uncached; hashed static assets may be cached normally.
+
+## Cloudflare Web Analytics
+
+The frontend installs the Cloudflare Web Analytics beacon only on
+`www.toonranks.com`; UAT and localhost are excluded. The loader also detects an
+automatically injected Cloudflare beacon so a deployment cannot double-count traffic.
+Set `VITE_CLOUDFLARE_WEB_ANALYTICS_TOKEN` on the Railway frontend service to the
+site token shown in Cloudflare Web Analytics. It is a public browser identifier,
+not a privileged API credential.
+
+After deploying this code, set the Cloudflare Web Analytics site from automatic
+setup to **Enable with JS Snippet installation**. The application then owns beacon
+injection and production remains the only tracked hostname.
 
 ## Release flow
 

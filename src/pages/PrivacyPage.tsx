@@ -96,10 +96,12 @@ export default function PrivacyPage() {
             Security, CAPTCHA, and Analytics
           </h2>
           <p>
-            We use tools such as reCAPTCHA, Google sign-in, and Google tags or
-            analytics to protect the site, understand usage, and improve the
-            service. These providers may process technical information according
-            to their own policies.
+            We use tools such as reCAPTCHA, Google sign-in, Google tags, and
+            Cloudflare Web Analytics to protect the site, understand usage, and
+            improve the service. Cloudflare provides aggregate page-view and
+            performance measurements without using analytics cookies. These
+            providers may process technical information according to their own
+            policies.
           </p>
         </section>
 
@@ -128,9 +130,9 @@ export default function PrivacyPage() {
               and core site features. These cannot be disabled.
             </li>
             <li>
-              <strong>Analytics</strong> — help us understand how visitors use
-              the site (Google Analytics / gtag). Only active after you accept
-              analytics cookies.
+              <strong>Analytics</strong> — optional Google measurement is only
+              active after you accept analytics cookies. Cloudflare Web Analytics
+              provides privacy-focused aggregate site measurements without cookies.
             </li>
             <li>
               <strong>Advertising</strong> — used to serve relevant ads and
