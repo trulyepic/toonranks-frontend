@@ -474,6 +474,31 @@ const SeriesDetailPage = () => {
                       ) : null}
                     </div>
 
+                    {seriesDetail.where_to_read?.length ? (
+                      <div className="mt-3 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 shadow-sm dark-theme-card-soft">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                          Where to read
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {seriesDetail.where_to_read.map((link) => (
+                            <a
+                              key={link.url}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-100 transition hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900 dark:hover:bg-emerald-900/60"
+                            >
+                              {link.site}
+                              <span aria-hidden="true">↗</span>
+                            </a>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          Official platforms. Support the creators.
+                        </p>
+                      </div>
+                    ) : null}
+
                     {hasExternalContext ? (
                       <div className="mt-3 rounded-[24px] border border-blue-100 bg-blue-50/80 px-5 py-4 shadow-[0_16px_32px_-28px_rgba(37,99,235,0.65)] dark:border-[#30405f] dark:bg-[linear-gradient(145deg,_rgba(24,34,58,0.82),_rgba(18,25,42,0.82))]">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
