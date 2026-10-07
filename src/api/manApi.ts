@@ -416,7 +416,12 @@
 // };
 
 // src/api/manApi.ts
-import type { AvatarFields, AvatarPreset, SeriesDetailData } from "../types/types";
+import type {
+  AvatarFields,
+  AvatarPreset,
+  ReadingLink,
+  SeriesDetailData,
+} from "../types/types";
 import { api } from "./client"; // <-- your shared Axios instance
 import { isAxiosError } from "axios";
 
@@ -541,6 +546,7 @@ export interface SeriesPayload {
   author?: string;
   artist?: string;
   status?: Exclude<SeriesStatus, null>;
+  where_to_read?: ReadingLink[];
 }
 
 export interface SeriesDetailPayload {
@@ -753,6 +759,9 @@ export const createSeries = async (data: SeriesPayload): Promise<Series> => {
   if (data.author) form.append("author", data.author);
   if (data.artist) form.append("artist", data.artist);
   if (data.status) form.append("status", data.status);
+  if (data.where_to_read?.length) {
+    form.append("where_to_read", JSON.stringify(data.where_to_read));
+  }
 
   const res = await api.post<Series>("/series/", form);
   return res.data;
@@ -845,6 +854,7 @@ export const editSeries = async (
     artist: string;
     cover: File;
     status: SeriesStatus;
+    where_to_read: ReadingLink[];
   }>
 ): Promise<Series> => {
   const form = new FormData();
@@ -858,6 +868,9 @@ export const editSeries = async (
   }
   if (data.cover instanceof File) {
     form.append("cover", data.cover);
+  }
+  if (data.where_to_read !== undefined) {
+    form.append("where_to_read", JSON.stringify(data.where_to_read));
   }
 
   const res = await api.put<Series>(`/series/${id}`, form);
