@@ -730,8 +730,12 @@ export default function ThreadPage() {
 
   // Fetch top-10 rank map once for byline badges
   useEffect(() => {
+    if (!user) {
+      setRankMap({});
+      return;
+    }
     getTopRankMap().then(setRankMap).catch(() => {});
-  }, []);
+  }, [user]);
 
   // Read page from URL
   useEffect(() => {

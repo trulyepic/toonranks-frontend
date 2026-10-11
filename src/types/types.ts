@@ -65,5 +65,6 @@ export interface User extends AvatarFields {
 
 export interface UserContextType {
   user: User | null;
+  authReady: boolean;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
