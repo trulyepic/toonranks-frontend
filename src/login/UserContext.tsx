@@ -6,6 +6,7 @@ import { forceLogout, scheduleLogoutAtJwtExp } from "../util/authUtils";
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -24,6 +25,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
       }
     }
+    setAuthReady(true);
   }, []);
 
   // Optional: cross-tab sync (logout in all tabs)
@@ -38,7 +40,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, authReady, setUser }}>
       {children}
     </UserContext.Provider>
   );

@@ -5,6 +5,7 @@ import { getPublicProfile, type PublicProfile } from "../api/manApi";
 import UserAvatar from "../components/UserAvatar";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { SITE_NAME, SITE_ORIGIN } from "../config/site";
+import { useUser } from "../login/useUser";
 
 type ProfileLoaderData = { profile: PublicProfile | null; notFound: boolean };
 
@@ -79,6 +80,7 @@ function formatJoinDate(iso: string | null): string {
 }
 
 export default function UserProfilePage() {
+  const { user: viewer } = useUser();
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const loaderData = useLoaderData() as ProfileLoaderData | null;
@@ -228,7 +230,7 @@ export default function UserProfilePage() {
               )}
 
               {/* Ranker position */}
-              {profile.rank && (
+              {viewer && profile.rank && (
                 <button
                   onClick={() => navigate("/leaderboard")}
                   className="inline-flex items-center rounded-full bg-slate-100 px-3.5 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-200 dark:bg-[#241d19] dark:text-slate-400 dark:ring-[#342b24] dark:hover:bg-[#2a221c]"

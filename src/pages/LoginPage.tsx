@@ -58,7 +58,8 @@ const LoginPage = () => {
       return;
     }
 
-    navigate("/");
+    const returnTo = (location.state as { from?: string } | null)?.from;
+    navigate(returnTo || "/", { replace: true });
   };
 
   const handleLogin = async () => {
