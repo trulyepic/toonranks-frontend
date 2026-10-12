@@ -6,6 +6,7 @@ import RelatedArticles from "../components/RelatedArticles";
 import AddSeriesDetailModal from "../components/AddSeriesDetailModal";
 import MarkdownProse from "../components/MarkdownProse";
 import {
+  approveSeries,
   getSeriesDetailById,
   getSeriesSummary,
 } from "../api/manApi";
@@ -146,6 +147,9 @@ const SeriesDetailPage = () => {
   const loadedSummary = loaderData?.summary ?? null;
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [approvalMessage, setApprovalMessage] = useState<string | null>(null);
   const [series, setSeries] = useState<typeof dummyData>({
     ...dummyData,
     id: Number(id),
@@ -211,6 +215,9 @@ const SeriesDetailPage = () => {
   const hasExistingTitleDetails = Boolean(
     seriesDetail?.series_cover_url || seriesDetail?.synopsis?.trim()
   );
+  const isDetailReady = Boolean(
+    seriesDetail?.series_cover_url && seriesDetail?.synopsis?.trim()
+  );
   const hasExternalContext = Boolean(
     seriesDetail?.external_source &&
       (seriesDetail.external_score != null ||
@@ -234,6 +241,26 @@ const SeriesDetailPage = () => {
   );
   const canOpenDetailsEditor = canEditDetails || canManagePendingDetails;
   const canShowDetailsAction = canOpenDetailsEditor;
+  const canApprovePendingTitle = Boolean(isAdmin && isPendingSubmission);
+
+  const handleApprove = async () => {
+    if (!id || approving || !isDetailReady) return;
+
+    setApproving(true);
+    setApprovalError(null);
+    setApprovalMessage(null);
+    try {
+      await approveSeries(Number(id));
+      setSeriesDetail((current) =>
+        current ? { ...current, approval_status: "APPROVED" } : current
+      );
+      setApprovalMessage("Title approved and now visible in rankings.");
+    } catch (err) {
+      setApprovalError((err as Error).message || "Failed to approve title.");
+    } finally {
+      setApproving(false);
+    }
+  };
 
   useEffect(() => {
     setSeries((prev) => ({
@@ -358,16 +385,49 @@ const SeriesDetailPage = () => {
   return (
     <>
       <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 lg:px-10">
-      {canShowDetailsAction && (
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={() => setShowEditModal(true)}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 dark-theme-card-soft dark:text-slate-200 dark:hover:bg-[#241d19]"
-          >
-            {hasExistingTitleDetails
-              ? "Edit title details"
-              : "Add title details"}
-          </button>
+      {(canShowDetailsAction || canApprovePendingTitle || approvalMessage) && (
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+          {approvalError && (
+            <p className="w-full text-right text-sm font-medium text-rose-600 dark:text-rose-300">
+              {approvalError}
+            </p>
+          )}
+          {approvalMessage && (
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+              {approvalMessage}
+            </p>
+          )}
+          {canShowDetailsAction && (
+            <button
+              type="button"
+              onClick={() => setShowEditModal(true)}
+              disabled={approving}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60 dark-theme-card-soft dark:text-slate-200 dark:hover:bg-[#241d19]"
+            >
+              {hasExistingTitleDetails
+                ? "Edit title details"
+                : "Add title details"}
+            </button>
+          )}
+          {canApprovePendingTitle && (
+            <button
+              type="button"
+              onClick={handleApprove}
+              disabled={approving || !isDetailReady}
+              title={
+                isDetailReady
+                  ? "Approve this title"
+                  : "Add a synopsis and detail cover before approving"
+              }
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {approving
+                ? "Approving..."
+                : isDetailReady
+                  ? "Approve title"
+                  : "Waiting on details"}
+            </button>
+          )}
         </div>
       )}
 
