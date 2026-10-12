@@ -1,30 +1,89 @@
 import { useEffect, useState } from "react";
-import { Clock3 } from "lucide-react";
+import { Clock3, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   getMySubmittedSeries,
+  removeMyApprovedSubmissions,
   type PendingSeries,
   type Series,
 } from "../api/manApi";
 import { useUser } from "../login/useUser";
-import { canSubmitSeriesUser } from "../util/roleUtils";
+import { canSubmitSeriesUser, isAdminUser } from "../util/roleUtils";
 import EditSeriesModal from "../components/EditSeriesModal";
 import { NoIndexSeo } from "../components/Seo";
 import { SITE_NAME } from "../config/site";
 import { formatSubmissionAge } from "../util/submissionAge";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 function statusLabel(status?: string | null) {
   if (!status) return "Pending review";
   return status.replace(/_/g, " ");
 }
 
+function isApprovedSubmission(item: PendingSeries) {
+  return String(item.approval_status || "").toUpperCase() === "APPROVED";
+}
+
 export default function MySubmissionsPage() {
   const { user } = useUser();
   const canSubmit = canSubmitSeriesUser(user);
+  const isAdmin = isAdminUser(user);
   const [items, setItems] = useState<PendingSeries[]>([]);
   const [editItem, setEditItem] = useState<PendingSeries | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedApprovedIds, setSelectedApprovedIds] = useState<Set<number>>(
+    new Set()
+  );
+  const [removeIds, setRemoveIds] = useState<number[]>([]);
+  const [removing, setRemoving] = useState(false);
+
+  const approvedIds = items
+    .filter(isApprovedSubmission)
+    .map((item) => item.id);
+  const allApprovedSelected =
+    approvedIds.length > 0 &&
+    approvedIds.every((id) => selectedApprovedIds.has(id));
+
+  const toggleApprovedSelection = (seriesId: number) => {
+    setSelectedApprovedIds((current) => {
+      const next = new Set(current);
+      if (next.has(seriesId)) next.delete(seriesId);
+      else next.add(seriesId);
+      return next;
+    });
+  };
+
+  const toggleAllApproved = () => {
+    setSelectedApprovedIds(
+      allApprovedSelected ? new Set() : new Set(approvedIds)
+    );
+  };
+
+  const handleRemoveApproved = async () => {
+    if (removeIds.length === 0) return;
+
+    setRemoving(true);
+    setError(null);
+    try {
+      const removedIds = await removeMyApprovedSubmissions(removeIds);
+      const removed = new Set(removedIds);
+      setItems((current) => current.filter((item) => !removed.has(item.id)));
+      setSelectedApprovedIds((current) => {
+        const next = new Set(current);
+        removedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+      setRemoveIds([]);
+    } catch (err) {
+      setError(
+        (err as Error).message ||
+          "Failed to remove approved titles from submission history."
+      );
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const mergeUpdatedSubmission = (
     item: PendingSeries,
@@ -119,6 +178,29 @@ export default function MySubmissionsPage() {
             </div>
           )}
 
+          {isAdmin && approvedIds.length > 0 && !loading && (
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-[#3a3028] dark:bg-[#1e1814]">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={allApprovedSelected}
+                  onChange={toggleAllApproved}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-[#4a3c33] dark:bg-[#17120f]"
+                />
+                Select all approved ({approvedIds.length})
+              </label>
+              <button
+                type="button"
+                onClick={() => setRemoveIds(Array.from(selectedApprovedIds))}
+                disabled={selectedApprovedIds.size === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900/80 dark:bg-[#211614] dark:text-rose-200 dark:hover:bg-rose-950/30"
+              >
+                <Trash2 aria-hidden="true" className="h-4 w-4" />
+                Remove selected ({selectedApprovedIds.size})
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className="py-10 text-sm text-slate-500 dark:text-slate-400">
               Loading your submissions...
@@ -130,8 +212,7 @@ export default function MySubmissionsPage() {
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
               {items.map((item) => {
-                const isApproved =
-                  String(item.approval_status || "").toUpperCase() === "APPROVED";
+                const isApproved = isApprovedSubmission(item);
                 const approvalAge = isApproved
                   ? formatSubmissionAge(item.approved_at)
                   : null;
@@ -141,6 +222,28 @@ export default function MySubmissionsPage() {
                     key={item.id}
                     className="dark-theme-card overflow-hidden rounded-[28px] border border-slate-200 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.45)]"
                   >
+                    {isAdmin && isApproved && (
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3 dark:border-[#342a23] sm:px-5">
+                        <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                          <input
+                            type="checkbox"
+                            checked={selectedApprovedIds.has(item.id)}
+                            onChange={() => toggleApprovedSelection(item.id)}
+                            aria-label={`Select ${item.title}`}
+                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-[#4a3c33] dark:bg-[#17120f]"
+                          />
+                          Select
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setRemoveIds([item.id])}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                        >
+                          <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </div>
+                    )}
                     <div className="flex gap-4 p-4 sm:p-5">
                       <Link
                         to={`/series/${item.id}`}
@@ -282,6 +385,25 @@ export default function MySubmissionsPage() {
           }}
         />
       )}
+
+      <ConfirmModal
+        open={removeIds.length > 0}
+        title={
+          removeIds.length === 1
+            ? "Remove approved title?"
+            : "Remove approved titles?"
+        }
+        message={
+          removeIds.length === 1
+            ? "This removes the approved title from My Submissions only. The published title will remain live everywhere else."
+            : `This removes ${removeIds.length} approved titles from My Submissions only. The published titles will remain live everywhere else.`
+        }
+        confirmText={removeIds.length === 1 ? "Remove title" : "Remove titles"}
+        destructive
+        busy={removing}
+        onConfirm={handleRemoveApproved}
+        onCancel={() => setRemoveIds([])}
+      />
     </div>
   );
 }
