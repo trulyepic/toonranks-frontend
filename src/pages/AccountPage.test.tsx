@@ -28,7 +28,7 @@ vi.mock("../api/manApi", async (importOriginal) => {
 function renderAccountPage(user: User | null) {
   return render(
     <MemoryRouter>
-      <UserContext.Provider value={{ user, setUser: vi.fn() }}>
+      <UserContext.Provider value={{ user, authReady: true, setUser: vi.fn() }}>
         <AccountPage />
       </UserContext.Provider>
     </MemoryRouter>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLoaderData } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import {
   getLeaderboard,
   type LeaderboardUser,
@@ -9,19 +9,14 @@ import UserAvatar from "../components/UserAvatar";
 import UserTags from "../components/UserTags";
 import { inlineUsernameClassName } from "../util/userDisplay";
 import { SITE_NAME } from "../config/site";
+import { useUser } from "../login/useUser";
 
 const PAGE_SIZE = 50;
-
-// SSR loader: fetch page 1 of the leaderboard on the server so the rankings are
-// in the initial HTML. The client revalidates + paginates.
-export async function loader() {
-  const result = await getLeaderboard(1, PAGE_SIZE).catch(() => null);
-  return { result };
-}
 
 export function meta() {
   return [
     { title: `Rankers — ${SITE_NAME}` },
+    { name: "robots", content: "noindex, nofollow" },
     {
       name: "description",
       content: `See the top community contributors on ${SITE_NAME}, ranked by Cred Points earned through forum upvotes and series ratings.`,
@@ -208,19 +203,15 @@ function LeaderboardSkeleton() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function LeaderboardPage() {
-  const initialResult =
-    (useLoaderData() as { result?: LeaderboardPageOut | null } | null)
-      ?.result ?? null;
-  const [result, setResult] = useState<LeaderboardPageOut | null>(
-    initialResult
-  );
-  const [topThree, setTopThree] = useState<LeaderboardUser[]>(
-    initialResult?.items.slice(0, 3) ?? []
-  );
+  const { user, authReady } = useUser();
+  const location = useLocation();
+  const [result, setResult] = useState<LeaderboardPageOut | null>(null);
+  const [topThree, setTopThree] = useState<LeaderboardUser[]>([]);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(!initialResult);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!authReady || !user) return;
     setLoading(true);
     getLeaderboard(page, PAGE_SIZE)
       .then((data) => {
@@ -229,7 +220,19 @@ export default function LeaderboardPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [authReady, page, user]);
+
+  if (!authReady) return <LeaderboardSkeleton />;
+
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname }}
+      />
+    );
+  }
 
   // On page 1 the list starts at rank #4; other pages show everything
   const listItems = result

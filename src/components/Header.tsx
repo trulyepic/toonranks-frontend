@@ -312,9 +312,11 @@ const Header = () => {
             <NavLink to="/forum" className={desktopNavLink}>
               Forum
             </NavLink>
-            <NavLink to="/leaderboard" className={desktopNavLink}>
-              Leaderboard
-            </NavLink>
+            {user && (
+              <NavLink to="/leaderboard" className={desktopNavLink}>
+                Leaderboard
+              </NavLink>
+            )}
             <NavLink to="/articles" className={desktopNavLink}>
               Articles
             </NavLink>
@@ -644,7 +646,9 @@ const Header = () => {
                   { to: "/type/MANGA", label: "Manga" },
                   { to: "/type/MANHUA", label: "Manhua" },
                   { to: "/forum", label: "Forum" },
-                  { to: "/leaderboard", label: "Leaderboard" },
+                  ...(user
+                    ? [{ to: "/leaderboard", label: "Leaderboard" }]
+                    : []),
                   { to: "/articles", label: "Articles" },
                 ].map((item) => (
                   <NavLink

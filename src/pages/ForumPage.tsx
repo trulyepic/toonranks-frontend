@@ -302,8 +302,12 @@ export default function ForumPage() {
 
   // Fetch top-10 rank map once for byline badges
   useEffect(() => {
+    if (!user) {
+      setRankMap({});
+      return;
+    }
     getTopRankMap().then(setRankMap).catch(() => {});
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
