@@ -777,6 +777,16 @@ export const getMySubmittedSeries = async (): Promise<PendingSeries[]> => {
   return res.data;
 };
 
+export const removeMyApprovedSubmissions = async (
+  seriesIds: number[]
+): Promise<number[]> => {
+  const res = await api.post<{ removed_ids: number[] }>(
+    "/series/submissions/mine/remove",
+    { series_ids: seriesIds }
+  );
+  return res.data.removed_ids;
+};
+
 export const approveSeries = async (seriesId: number): Promise<Series> => {
   const res = await api.post<Series>(`/series/${seriesId}/approve`);
   return res.data;
